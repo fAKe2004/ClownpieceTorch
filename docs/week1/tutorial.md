@@ -784,7 +784,7 @@ $$
   Tensor view(const shape_t& purposed_shape) const;
 
   Tensor narrow(int dim, int start, int length, bool copy=false) const;
-  vec<Tensor> chunk(int dim, int num_chunk) const;
+  vec<Tensor> chunk(int chunks, int dim) const;
 
   vec<Tensor> split(int dim, int split_size) const;
   vec<Tensor> split(int dim, veci split_sections) const;
@@ -840,13 +840,13 @@ For simplicity, we only allow viewing if the tensor is contiguous. If not, throw
 Return a sliced tensor at `dim`, with `[start:start+length]`. Return a view if `copy=false`; otherwise, return a contiguous new tensor. [link](https://docs.pytorch.org/docs/stable/generated/torch.narrow.html#torch.narrow)
 
 ---
-> **vec<Tensor> chunk(int dim, int num_chunk) const**
+> **vec<Tensor> chunk(int chunks, int dim) const**
 
 [link](https://docs.pytorch.org/docs/stable/generated/torch.chunk.html#torch.chunk)
 
-Attempts to split a tensor into the specified number of `num_chunk`. Each chunk is a view of the input tensor.
+Attempts to split a tensor into the specified number of `chunks`. Each chunk is a view of the input tensor.
 
-If the tensor size along the given dimension `dim` is divisible by `num_chunk`, all returned chunks will be the same size. If the tensor size along the given dimension dim is not divisible by `num_chunk`, all returned chunks will be the same size, except the last one. If such division is not possible, this function may return fewer than the specified number of num_chunk.
+If the tensor size along the given dimension `dim` is divisible by `chunks`, all returned chunks will be the same size. If the tensor size along the given dimension dim is not divisible by `chunks`, all returned chunks will be the same size, except the last one. If such division is not possible, this function may return fewer than the specified number of chunks.
 
 ---
 > **vec<Tensor> split(int dim, int split_size) const** & **vec<Tensor> split(int dim, veci split_sections) const**

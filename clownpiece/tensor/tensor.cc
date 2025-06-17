@@ -1,6 +1,10 @@
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+namespace py = pybind11;
 #include "tensor.h"
 #include <cmath>
 #include <string>
+
 
 
 namespace at {
@@ -36,7 +40,7 @@ namespace at {
     slice.second = std::min(slice.second, len);
 
     if (slice.first >= slice.second) //empty slice
-      // throw std::out_of_range("normalize: slice out of range");
+      // throw std::runtime_error("normalize: slice out of range");
       slice = slice_t(0, 0);
 
     return slice;
@@ -46,7 +50,7 @@ namespace at {
     if (index < 0)
       index += len;
     if (index < 0 || index >= len)
-      throw std::out_of_range("normalize: index out of range");
+      throw std::runtime_error("normalize: index out of range");
     return index;
   }
 
@@ -66,7 +70,7 @@ namespace at {
       int a_size = (i < (int)a.size()) ? a[a.size() - 1 - i] : 1;
       int b_size = (i < (int)b.size()) ? b[b.size() - 1 - i] : 1;
       if (a_size != 1 && b_size != 1 && a_size != b_size)
-        throw std::invalid_argument("broadcast_shape: shape mismatch");
+        throw std::runtime_error("broadcast_shape: shape mismatch");
       result[max_dim - 1 - i] = std::max(a_size, b_size);
     }
     return result;
@@ -171,7 +175,7 @@ namespace at {
 
   Tensor apply_binary_op(const Tensor& lhs, const Tensor& rhs, const std::function<dtype(dtype, dtype)>& op) {
     // if (!check_shape_match(lhs.shape_, rhs.shape_))
-    //   throw std::invalid_argument("apply_binary_op: shape mismatch");
+    //   throw std::runtime_error("apply_binary_op: shape mismatch");
     Tensor lhs_b, rhs_b;
     std::tie(lhs_b, rhs_b) = Tensor::broadcast(lhs, rhs);
 
@@ -223,7 +227,7 @@ namespace at {
       output_T.data_at(i) = op(buffer);
     }
 
-    Tensor output = output_T.transpose(dim, -1);
+    Tensor output = output_T.transpose(dim, -1).reshape(output_shape);
     return output; // output dim is not squeezed
   }
 
@@ -259,7 +263,7 @@ namespace at {
   // physical index of the index-th element in flattened logic order
   int Tensor::index_at(int index) const {
     if (index < 0 || index >= numel_)
-      throw std::out_of_range("index out of range");
+      throw std::runtime_error("index out of range");
 
     if (is_contiguous())
       return offset_ + index;
@@ -287,7 +291,7 @@ namespace at {
     for (int i = 0; i < (int)new_shape.size(); ++i) {
       if (new_shape[i] == -1) {
         if (neg1_at != -1)
-          throw std::invalid_argument("induce_shape: only one -1 is allowed in the shape");
+          throw std::runtime_error("induce_shape: only one -1 is allowed in the shape");
         neg1_at = i;
       } else
         prod *= new_shape[i];
@@ -296,7 +300,7 @@ namespace at {
       return new_shape;
 
     if (prod == 0 || numel() % prod != 0)
-      throw std::invalid_argument("induce_shape: either zero or not divisible");
+      throw std::runtime_error("induce_shape: either zero or not divisible");
 
     new_shape[neg1_at] = numel() / prod;
     return new_shape;
@@ -328,15 +332,15 @@ namespace at {
     : shape_(shape), stride_(calc_stride(shape)), offset_(0), storage_(Storage(data)) {
       post_init();
       if (numel() != (int)data.size())
-        throw std::invalid_argument("Tensor: shape and data size mismatch");
+        throw std::runtime_error("Tensor: shape and data size mismatch");
     }
   Tensor::Tensor(const shape_t& shape, const stride_t& stride, int offset, Storage storage) 
     : shape_(shape), stride_(stride), offset_(offset), storage_(storage) {
     post_init();
     if (shape.size() != stride.size())
-      throw std::invalid_argument("Tensor: shape and stride size mismatch");
+      throw std::runtime_error("Tensor: shape and stride size mismatch");
     if (offset < 0 || (storage_.data != nullptr and offset + real_numel() > (int)storage_.size))
-      throw std::out_of_range("Tensor: offset out of range");
+      throw std::runtime_error("Tensor: offset out of range");
   }
 
   Tensor::Tensor(const Tensor& other) = default;
@@ -345,7 +349,7 @@ namespace at {
 
   Tensor& Tensor::operator=(dtype value) {
     if (numel_ != 1)
-      throw std::invalid_argument("Tensor: only singleton tensor can be assigned");
+      throw std::runtime_error("Tensor: only singleton tensor can be assigned");
     this->data_at(0) = value;
     return *this;
   }
@@ -362,7 +366,7 @@ namespace at {
   */
   dtype Tensor::item() const {
     if (numel_ != 1)
-      throw std::invalid_argument("Tensor: item can only be called on singleton tensor");
+      throw std::runtime_error("Tensor: item can only be called on singleton tensor");
     return data_at(0);
   }
 
@@ -418,7 +422,7 @@ namespace at {
       return *this;
 
     if (!check_shape_match(shape_, other.shape_))
-      throw std::invalid_argument("Tensor: shape mismatch");
+      throw std::runtime_error("Tensor: shape mismatch");
 
     for (int i = 0; i < numel_; i++)
       this->data_at(i) = other.data_at(i);
@@ -432,7 +436,7 @@ namespace at {
     shape_t shape = shape_;
     shape.erase(shape.begin() + dim);
     if (!check_shape_match(shape, index.shape_) || !check_shape_match(shape, src.shape_))
-      throw std::invalid_argument("Tensor: shape mismatch in scatter");
+      throw std::runtime_error("Tensor: shape mismatch in scatter");
 
     Tensor transposed = this->transpose(dim, -1);
     int dim_size = transposed.size(-1);
@@ -452,7 +456,7 @@ namespace at {
 
   Tensor Tensor::operator[](const vec<slice_t>& slices) const {
     if (slices.size() == 0 || (int)slices.size() > dim_)
-    throw std::invalid_argument("Tensor: slices are empty or size exceeds dim");
+    throw std::runtime_error("Tensor: slices are empty or size exceeds dim");
     
     vec<slice_t> padded_slices = slices;
     for (int i = slices.size(); i < dim_; i++)
@@ -472,7 +476,7 @@ namespace at {
 
   Tensor Tensor::operator[](slice_t slice) const {
     if (!dim_)
-      throw std::invalid_argument("Tensor: slicing tensor with dim = 0");
+      throw std::runtime_error("Tensor: slicing tensor with dim = 0");
     slice = normalize_slice(slice, shape_[0]);
     shape_t new_shape = shape_;
     new_shape[0] = slice.second - slice.first;
@@ -483,7 +487,7 @@ namespace at {
 
   Tensor Tensor::operator[](const veci& index) const {
     if (index.size() == 0 || (int)index.size() > dim_)
-      throw std::invalid_argument("Tensor: index is empty or size exceeds dim");
+      throw std::runtime_error("Tensor: index is empty or size exceeds dim");
     vec<slice_t> slices = vec<slice_t>(index.size());
     for (int i = 0; i < (int)index.size(); i++) {
       slices[i].first = index[i];
@@ -511,7 +515,6 @@ namespace at {
   }
 
   Tensor operator+(const Tensor& lhs, const Tensor& rhs) {
-    
     return apply_binary_op(lhs, rhs, [](dtype x, dtype y)->dtype { return x + y; });
   }
   
@@ -526,7 +529,7 @@ namespace at {
   Tensor operator/(const Tensor& lhs, const Tensor& rhs) {
     return apply_binary_op(lhs, rhs, [](dtype x, dtype y)->dtype { return x / y; });
   }
-
+  
   Tensor operator==(const Tensor& lhs, const Tensor& rhs) {
     return apply_binary_op(lhs, rhs, [](dtype x, dtype y) -> dtype { return x == y; });
   }
@@ -576,7 +579,7 @@ namespace at {
     int l = l_mat.size(-2), m = l_mat.size(-1), n = r_mat.size(-2);
 
     if (l_mat.size(-1) != r_mat.size(-1))
-      throw std::invalid_argument("matmul: inner dimension mismatch");
+      throw std::runtime_error("matmul: inner dimension mismatch");
     
     shape_t l_batch_shape = shape_t(l_mat.shape_.begin(), l_mat.shape_.end() - 2);
     shape_t r_batch_shape = shape_t(r_mat.shape_.begin(), r_mat.shape_.end() - 2);
@@ -633,7 +636,7 @@ namespace at {
   /*
     other mathematical operations
   */
-  Tensor Tensor::sign() const {
+   Tensor Tensor::sign() const {
     return apply_unary_op(*this, [](dtype x)-> dtype {
       if (x > 0)
         return 1.0;
@@ -654,6 +657,12 @@ namespace at {
   }
   Tensor sin(const Tensor& tensor) {
     return tensor.sin();
+  }
+  Tensor Tensor::cos() const {
+    return apply_unary_op(*this, [](dtype x)->dtype { return std::cos(x); });
+  }
+  Tensor cos(const Tensor& tensor) {
+    return tensor.cos();
   }
   Tensor Tensor::tanh() const {
     return apply_unary_op(*this, [](dtype x)->dtype { return std::tanh(x); });
@@ -722,7 +731,7 @@ namespace at {
 
     Tensor output = apply_along_axis(*this, dim, sum_op);
     if (!keepdim)
-      output.squeeze(dim);
+      output = output.squeeze(dim);
     return output;
   }
 
@@ -733,7 +742,7 @@ namespace at {
   std::pair<Tensor, Tensor> Tensor::max(int dim, bool keepdim) const {
     std::function<std::pair<dtype, dtype>(const vec<dtype>&)> max_op = [keepdim](const vec<dtype>& vec) -> std::pair<dtype, dtype> {
       if (vec.empty())
-        throw std::invalid_argument("Tensor: max on empty vector");
+        throw std::runtime_error("Tensor: max on empty vector");
       dtype max_val = vec[0];
       dtype max_at = 0;
       for (int i = 1; i < (int)vec.size(); i++) {
@@ -749,8 +758,8 @@ namespace at {
     Tensor output_1, output_2;
     std::tie(output_1, output_2) = apply_along_axis(*this, dim, max_op);
     if (!keepdim) {
-      output_1.squeeze(dim);
-      output_2.squeeze(dim);
+      output_1 = output_1.squeeze(dim);
+      output_2 = output_2.squeeze(dim);
     }
     return std::make_pair(output_1, output_2);
   }
@@ -804,7 +813,7 @@ namespace at {
 
   Tensor Tensor::permute(veci p) const {
     if ((int)p.size() > dim_)
-      throw std::invalid_argument("Tensor: permute size exceeds dim");
+      throw std::runtime_error("Tensor: permute size exceeds dim");
 
     for (int& d: p)
       d = normalize_index(d, dim_);
@@ -813,7 +822,7 @@ namespace at {
     std::sort(sorted_p.begin(), sorted_p.end());
     auto p_end = std::unique(sorted_p.begin(), sorted_p.end());
     if (p_end != sorted_p.end())
-      throw std::invalid_argument("Tensor: permute contains duplicate dimensions");
+      throw std::runtime_error("Tensor: permute contains duplicate dimensions");
 
     shape_t new_shape = shape_;
     stride_t new_stride = stride_;
@@ -837,6 +846,7 @@ namespace at {
   }
 
   Tensor Tensor::reshape(const shape_t& purposed_shape, bool copy) const {
+    // copy is not tested, but kept for compatibility
     shape_t new_shape = induce_shape(purposed_shape);
 
     if (!is_contiguous() || copy) {
@@ -854,7 +864,7 @@ namespace at {
 
     int new_numel = calc_numel(new_shape);
     if (new_numel != numel_)
-      throw std::invalid_argument("Tensor: view shape numel mismatch");
+      throw std::runtime_error("Tensor: view shape numel mismatch");
 
     stride_t new_stride = calc_stride(new_shape);
 
@@ -865,7 +875,7 @@ namespace at {
     dim = normalize_index(dim, dim_);
     start = normalize_index(start, shape_[dim]);
     if (length < 0 || start + length > shape_[dim])
-      throw std::out_of_range("Tensor: narrow length out of range");
+      throw std::runtime_error("Tensor: narrow length out of range");
 
     shape_t new_shape = shape_;
     new_shape[dim] = length;
@@ -877,17 +887,17 @@ namespace at {
     else
       return output;
   }
-  vec<Tensor> Tensor::chunk(int dim, int num_chunk) const {
-    if (num_chunk <= 0)
-      throw std::invalid_argument("Tensor: number of chunks must be positive");
+  vec<Tensor> Tensor::chunk(int chunks, int dim) const {
+    if (chunks <= 0)
+      throw std::runtime_error("Tensor: number of chunks must be positive");
     int dim_size = size(dim);
-    int chunk_size = ceil_div(dim_size, num_chunk);
+    int chunk_size = ceil_div(dim_size, chunks);
 
     vec<Tensor> outputs;
     for (int begin = 0; begin < dim_size; begin += chunk_size) {
       int length = std::min(chunk_size, dim_size - begin);
       outputs.push_back(narrow(dim, begin, length));
-      begin += length;
+      // begin += length;
     }
     return outputs;
   }
@@ -895,7 +905,7 @@ namespace at {
   vec<Tensor> Tensor::split(int dim, int split_size) const {
     dim = normalize_index(dim, dim_);
     if (split_size <= 0)
-      throw std::invalid_argument("Tensor: split size must be positive");
+      throw std::runtime_error("Tensor: split size must be positive");
     vec<Tensor> outputs;
 
     int dim_size = size(dim);
@@ -908,13 +918,13 @@ namespace at {
   vec<Tensor> Tensor::split(int dim, veci split_sections) const {
     dim = normalize_index(dim, dim_);
     if (std::accumulate(split_sections.begin(), split_sections.end(), 0) != shape_[dim])
-      throw std::invalid_argument("Tensor: split sections size mismatch");
+      throw std::runtime_error("Tensor: split sections size mismatch");
   
     vec<Tensor> outputs;
     int begin = 0;
     for (int section : split_sections) {
       if (section <= 0)
-        throw std::invalid_argument("Tensor: split section size must be positive");
+        throw std::runtime_error("Tensor: split section size must be positive");
       outputs.push_back(narrow(dim, begin, section));
       begin += section;
     }
@@ -928,7 +938,7 @@ namespace at {
     int num_input = inputs.size();
     for (int i = 1; i < num_input; i++)
       if (!check_shape_match(shape, inputs[i].shape_))
-        throw std::invalid_argument("Tensor: stack shape mismatch");
+        throw std::runtime_error("Tensor: stack shape mismatch");
     dim = normalize_index(dim, inputs[0].dim_ + 1);
     
     shape_t new_shape = shape;
@@ -957,11 +967,11 @@ namespace at {
     for (int i = 1; i < num_input; i++) {
       shape_t other_shape = inputs[i].shape_;
       if (other_shape.size() != shape.size())
-        throw std::invalid_argument("Tensor: cat dimention mismatch");
+        throw std::runtime_error("Tensor: cat dimention mismatch");
 
       other_shape[dim] = 0;
       if (!check_shape_match(shape, other_shape))
-        throw std::invalid_argument("Tensor: cat shape mismatch at non-concatenation dimension");
+        throw std::runtime_error("Tensor: cat shape mismatch at non-concatenation dimension");
     }
     
     int total_size = 0;
@@ -990,7 +1000,7 @@ namespace at {
   Tensor Tensor::squeeze(int dim) const {
     dim = normalize_index(dim, dim_);
     if (shape_[dim] != 1)
-      throw std::invalid_argument("Tensor: squeeze on non-singleton dimension");
+      throw std::runtime_error("Tensor: squeeze on non-singleton dimension");
     shape_t new_shape = shape_;
     stride_t new_stride = stride_;
     new_shape.erase(new_shape.begin() + dim);
@@ -1051,14 +1061,14 @@ namespace at {
   */
   Tensor to_singleton_tensor(dtype value, int dim) {
     if (dim < 0)
-      throw std::invalid_argument("to_singleton_tensor: dim must be non-negative");
+      throw std::runtime_error("to_singleton_tensor: dim must be non-negative");
     
     return Tensor(shape_t(dim, 1), value);
   }
 
   Tensor ones(const shape_t& shape) {
     if (shape.empty())
-      throw std::invalid_argument("ones: shape cannot be empty");
+      throw std::runtime_error("ones: shape cannot be empty");
     return Tensor(shape, 1.0);
   }
   Tensor ones_like(const Tensor& ref) {
@@ -1067,7 +1077,7 @@ namespace at {
 
   Tensor zeros(const shape_t& shape) {
     if (shape.empty())
-      throw std::invalid_argument("zeros: shape cannot be empty");
+      throw std::runtime_error("zeros: shape cannot be empty");
     return Tensor(shape, 0.0);
   }
   Tensor zeros_like(const Tensor& ref) {
@@ -1076,7 +1086,7 @@ namespace at {
 
   Tensor randn(const shape_t& shape) {
     if (shape.empty())
-      throw std::invalid_argument("randn: shape cannot be empty");
+      throw std::runtime_error("randn: shape cannot be empty");
     
     std::function<dtype()> randn = []() -> dtype {
       return random::randn(random::mt19937_rng, 0, 1);
@@ -1099,7 +1109,7 @@ namespace at {
 
   Tensor arange(dtype start, dtype end, dtype step) {
     if (step <= 0)
-      throw std::invalid_argument("arange: step must be positive");
+      throw std::runtime_error("arange: step must be positive");
     if (start >= end)
       return Tensor();
     int numel = ceil_div(end - start, step);
@@ -1111,7 +1121,7 @@ namespace at {
 
   Tensor range(dtype start, dtype end, dtype step) {
     if (step <= 0)
-      throw std::invalid_argument("range: step must be positive");
+      throw std::runtime_error("range: step must be positive");
     if (start >= end)
       return Tensor();
     int numel = (end - start) / step + 1;
@@ -1123,7 +1133,7 @@ namespace at {
 
   Tensor linspace(dtype start, dtype end, int num_steps) {
     if (num_steps <= 0)
-      throw std::invalid_argument("linspace: num_steps must be positive");
+      throw std::runtime_error("linspace: num_steps must be positive");
 
     Tensor output = Tensor(shape_t({num_steps}));
     dtype step = (end - start) / (num_steps - 1);
@@ -1132,5 +1142,5 @@ namespace at {
     
     return output;
   }
-
+  
 };

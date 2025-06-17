@@ -93,14 +93,13 @@ class Tensor {
 
   int index_at(int index) const;
 
-  dtype& data_at(int index) const;
-
   friend int print_tensor_data_recursive(std::ostream& os, const Tensor& tensor, int dim_index, int flat_data_index, std::string prefix);
 
  public:
   /*
     constructors and assignments
   */
+  dtype& data_at(int index) const;
   Tensor();
   Tensor(dtype value);
   explicit Tensor(const shape_t& shape);
@@ -132,7 +131,11 @@ class Tensor {
   veci size() const;
   int size(int dim) const;
   bool is_contiguous() const;
-
+  const shape_t& get_shape() const { return shape_; }               // for graderlib
+  dtype& get_data_at(int index) const { return data_at(index); }    // for graderlib
+  const stride_t& get_stride() const { return stride_; }            // for graderlib
+  int get_offset() const { return offset_; }                        // for graderlib
+  const Storage& get_storage() const { return storage_; }                        // for graderlib
   /*
     clone, make contiguous and copy_from
   */
@@ -188,7 +191,7 @@ class Tensor {
     other mathematical operations
   */
   Tensor sign() const;
-
+  
   Tensor abs() const;
 
   Tensor sin() const;
@@ -239,7 +242,7 @@ class Tensor {
   Tensor view(const shape_t& purposed_shape) const;
 
   Tensor narrow(int dim, int start, int length, bool copy=false) const;
-  vec<Tensor> chunk(int dim, int num_chunk) const;
+  vec<Tensor> chunk(int chunks, int dim) const;
 
   vec<Tensor> split(int dim, int split_size) const;
   vec<Tensor> split(int dim, veci split_sections) const;

@@ -12,7 +12,6 @@ from torch import Tensor as TensorT
 
 from typing import Tuple, Any, Iterable
 import torch.multiprocessing as mp
-from clownpiece import wrap_tuple
 
 # global vars
 total_score: int = 0
@@ -38,23 +37,18 @@ def set_debug_mode(debug: bool):
 if os.getenv("DEBUG", None) is not None:
   set_debug_mode(True)
 
-def exec_with_timeout(func, *args, timeout=None, **kwargs) -> Tuple[bool, Any]:
+def exec_with_timeout_mp(func, *args, timeout=None, **kwargs) -> Tuple[bool, Any]:
 
   with mp.Manager() as manager:
     # why manager? pytorch mp treat pickling tensor in special way, if the worker quit, it's no longer available
     def worker(result_queue, func):
       try:
-        # execute the target funcction
         result = func(*args, **kwargs)
-        
-        results = wrap_tuple(result)
-        # detach torch tensor so that non-leaf tensor can be pickled.
-        results = [r.detach() if isinstance(r, TensorT) else r for r in results]
-        
-        result_queue.put((True, results))
+        print("result:", result)
+        result_queue.put((True, result))
       except Exception as e:
         if DEBUG_MODE:
-          result_queue.put((False, str(e)))
+          print("Exception in worker:", e)
           raise e
         else:
           result_queue.put((False, str(e)))
@@ -66,10 +60,22 @@ def exec_with_timeout(func, *args, timeout=None, **kwargs) -> Tuple[bool, Any]:
 
     if process.is_alive():
       process.terminate()
-      return False, RuntimeError(f"Timeout after {timeout} seconds; terminated")
+      return False, result_queue.get() if not result_queue.empty() else "Process timed out"
 
     success, result = result_queue.get()
   return success, result
+
+def exec_with_timeout(func, *args, timeout=None, **kwargs) -> Tuple[bool, Any]:
+    try:
+        result = func(*args, **kwargs)
+        if DEBUG_MODE:
+            print("result:", result)
+        return True, result
+    except Exception as e:
+        if DEBUG_MODE:
+            print("Exception in execution:", e)
+            raise e
+        return False, str(e)
 
 def print_separate_line():
   print("=" * 50)
@@ -89,17 +95,23 @@ def all_close(t1: TensorCT, t2: TensorT)->bool:
   if tuple(t1.shape) != tuple(t2.shape):
     return False
   
-  t1 = t1.reshape(-1,)
   t2 = t2.reshape(-1,)
-  for i in range(len(t1)):
-    if abs(t1[i].item() - t2[i].item()) > eps:
+  
+  len = 1
+  for dim in t1.shape:
+    len *= dim
+
+  for i in range(len):
+    if abs(t1.data_at(i) - t2[i]) > eps:
       return False
   
   return True
 
 def check_result_match(t1_list: Iterable[TensorCT], t2_list: Iterable[TensorT])->bool:
-  t1_list = wrap_tuple(t1_list)
-  t2_list = wrap_tuple(t2_list)
+  if not isinstance(t1_list, (list, tuple)):
+    t1_list = (t1_list, )
+  if not isinstance(t2_list, (list, tuple)):
+    t2_list = (t2_list, )
   if len(t1_list) != len(t2_list):
     return False
   for t1, t2 in zip(t1_list, t2_list):
@@ -112,12 +124,11 @@ def check_result_match(t1_list: Iterable[TensorCT], t2_list: Iterable[TensorT])-
   Decorator around a Tensor computation function. Return result will be compared against pytorch.
 """
 def testcase(name: str, score: int, timeout:int = 60):
-
+  global total_score, passed_score
+  total_score += score
   
-  def decorator(func): # expect function to take only one args: impl (either clownpiece or torch module)
+  def decorator(func): # expect function to take only one args: impl
     def wrapper():
-      global total_score
-      total_score += score
       
       print_separate_line()
       print(f"{name}: test start")
@@ -128,28 +139,35 @@ def testcase(name: str, score: int, timeout:int = 60):
 
       if not success_ct:
         print(f"{name}: test failed | test program failed with error:\n\n"
-              f"{result_ct}\n\n"
+              f"{result_t}\n"
               f"> Set DEBUG mode to see full traceback\n"
               )
+        
+        print_separate_line()
+        
         failed_test += [name]
         return
         
       if not success_t:
         print(f"{name}: test failed | reference program failed with error:\n\n"
-              f"{result_t}\n\n"
+              f"{result_t}\n"
               f"> Set DEBUG mode to see full traceback\n"
               f"> This should not happen; please contact TA with traceback log !!!")
+        print_separate_line()
         failed_test += [name]
+        
         return
         
       if not check_result_match(result_ct, result_t):
         print(f"{name}: test failed | test output does not match reference output")
         print(f">test outputs:\n{result_ct}\n")
         print(f">reference outputs:\n{result_t}\n")
+        print_separate_line()
         failed_test += [name]
         return
       
       print(f"{name}: test passed")
+      print_separate_line()
       
       passed_score += score
       passed_test += [name]
@@ -159,7 +177,7 @@ def testcase(name: str, score: int, timeout:int = 60):
     
 def grader_summary(name):
   print_separate_line()
-  print(f"{name}: grader summary:")
+  print(f"{name}: grader summary :")
   print(f"score: {passed_score}/{total_score}")
   print(f"# passed: {len(passed_test)}")
   print(f"# failed: {len(failed_test)}")
