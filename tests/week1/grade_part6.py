@@ -6,57 +6,68 @@ import torch
 import clownpiece
 from graderlib import self_path
 from graderlib import set_debug_mode, testcase, grader_summary
-clownpiece.Tensor = clownpiece.TensorBase
+
+from utils import use_cpp_tensor
 
 @testcase(name="sum1: sum along dim=0", score=10)
+@use_cpp_tensor
 def sum1(impl=torch):
     a = impl.Tensor([[1, 2, 3], [4, 5, 6]])
     return a.sum(dim = 0)
 
 @testcase(name="sum2: sum along dim=1", score=10)
+@use_cpp_tensor
 def sum2(impl=torch):
     a = impl.Tensor([[1, 2, 3], [4, 5, 6]])
     return a.sum(dim = 1)
 
 @testcase(name="sum3: sum with keepdim", score=10)
+@use_cpp_tensor
 def sum3(impl=torch):
     a = impl.Tensor([[1, 2, 3], [4, 5, 6]])
     return a.sum(dim = 1, keepdim = True)
 
 @testcase(name="sum4: sum for higher dimension", score=10)
+@use_cpp_tensor
 def sum4(impl=torch):
     a = impl.Tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
     return a.sum(dim = 1, keepdim = True)
 
 @testcase(name="max1: max along dim=0", score=10)
+@use_cpp_tensor
 def max1(impl=torch):
     a = impl.Tensor([[1, 5, 2], [4, 3, 6]])
     vals, idxs = a.max(dim = 0)
     return (vals, idxs)
 
 @testcase(name="max2: max along dim=1", score=10)
+@use_cpp_tensor
 def max2(impl=torch):
     a = impl.Tensor([[1, 5, 2], [4, 3, 6]])
     vals, idxs = a.max(dim = 1)
     return (vals, idxs)
 
 @testcase(name="max3: max with keepdim", score=10)
+@use_cpp_tensor
 def max3(impl=torch):
     a = impl.Tensor([[1, 5, 2], [4, 3, 6]])
     vals, idxs = a.max(dim = 1, keepdim = True)
     return (vals, idxs)
 
 @testcase(name="max4: max for higher dimension", score=10)
+@use_cpp_tensor
 def max4(impl=torch):
     a = impl.Tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
     return a.max(dim = 1)
 
 @testcase(name="softmax1: softmax for tensor", score=10)
+@use_cpp_tensor
 def softmax1(impl=torch):
     a = impl.Tensor([[1., 2., 3.], [2., 4., 6.]])
     return a.softmax(dim = 0)
 
 @testcase(name="softmax2: softmax for bigger tensor", score=10)
+@use_cpp_tensor
 def softmax2(impl=torch):
     a = impl.Tensor([[[1., -2., 3., 4., 5.], [6., 7., 8., 9., -10.]],
                      [[11., 12., 13., 14., 15.], [16., 17., 18., 19., -20.]],

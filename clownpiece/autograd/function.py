@@ -524,6 +524,7 @@ class Reshape(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor, shape: List[int]):
         ctx.input_shape = input.shape
+        print("SHAPE:", shape)
         ctx.output_shape = tuple(shape)
         return input.reshape(shape)
     

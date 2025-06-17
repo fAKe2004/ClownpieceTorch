@@ -6,9 +6,11 @@ import torch
 import clownpiece
 from graderlib import self_path
 from graderlib import set_debug_mode, testcase, grader_summary
-clownpiece.Tensor = clownpiece.TensorBase
+
+from utils import use_cpp_tensor
 
 @testcase(name="utils1: from scalar", score=10)
+@use_cpp_tensor
 def utils1(impl = torch):
   scalar = 42
   if impl.__name__ == "torch":
@@ -18,17 +20,20 @@ def utils1(impl = torch):
   return (impl.numel(a), a.dim(), tuple(a.size()))
 
 @testcase(name="utils2: from 1-D tensor", score=10)
+@use_cpp_tensor
 def utils2(impl = torch):
   lst = [1, 2, 3, 4, 5]
   a = impl.Tensor(lst)
   return (impl.numel(a), a.dim(), tuple(a.size()), a.size(0))
 
 @testcase(name="utils3: from n-D tensor", score=10)
+@use_cpp_tensor
 def utils3(impl = torch):
   a = impl.zeros((1, 2, 3, 4, 5))
   return (impl.numel(a), a.dim(), tuple(a.size()), a.size(0), a.size(1), a.size(2), a.size(3), a.size(4))
 
 @testcase(name="clone1: correctness of clone", score=10)
+@use_cpp_tensor
 def clone1(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
@@ -36,6 +41,7 @@ def clone1(impl = torch):
   return b
 
 @testcase(name="clone2: deepness of clone", score=10)
+@use_cpp_tensor
 def clone2(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
@@ -47,6 +53,7 @@ def clone2(impl = torch):
   return a
 
 @testcase(name="copyfrom1: correctness of copyfrom", score=10)
+@use_cpp_tensor
 def copyfrom1(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
@@ -56,6 +63,7 @@ def copyfrom1(impl = torch):
   return b
 
 @testcase(name="copyfrom2: throwing error", score=10)
+@use_cpp_tensor
 def copyfrom2(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
@@ -82,6 +90,6 @@ def testsets_part2():
 
 if __name__ == "__main__":
   print("Beginning grading part 2")
-#   set_debug_mode(True)
+  set_debug_mode(True)
   testsets_part2()
   grader_summary("part2")

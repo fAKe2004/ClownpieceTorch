@@ -6,7 +6,7 @@ sys.path.append(self_path + "/../../")
 sys.path.append(self_path)
 
 import clownpiece as CT
-from clownpiece import TensorBase as TensorCT
+from clownpiece import Tensor as TensorCT
 import torch as T
 from torch import Tensor as TensorT
 

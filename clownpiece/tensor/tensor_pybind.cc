@@ -28,6 +28,7 @@ PYBIND11_MODULE(clownpiece, m) {
         .def("__repr__",
             [](const at::Tensor &t) {
                 std::ostringstream oss;
+                oss << "I AM CLOWNPIECE TENSOR!\n";
                 oss << t;
                 return oss.str();
             }
@@ -41,52 +42,29 @@ PYBIND11_MODULE(clownpiece, m) {
         }, py::arg("index"), py::arg("value"),
             "Change the data at the specified index. This is for graderlib use only.")
         .def("tolist", &tensor_to_list)
-        // .def(py::pickle(
-        //     // __getstate__: 序列化方法
-        //     [](const Tensor& t) -> py::tuple {
-        //         // 1. 序列化元数据
-        //         py::tuple metadata = py::make_tuple(
-        //             t.get_shape(),
-        //             t.is_contiguous() ? stride_t() : t.get_stride(), // 非连续才保存步长
-        //             t.get_offset()
-        //         );
-        //         // 2. 序列化存储数据
-        //         const Storage& storage = t.get_storage();
-        //         py::bytes data(
-        //             reinterpret_cast<const char*>(storage.data.get()),
-        //             storage.size * sizeof(dtype)
-        //         );
-        //         return py::make_tuple(metadata, data);
-        //     },
-        //     // __setstate__: 反序列化方法
-        //     [](py::tuple t) -> Tensor {
-        //         if (t.size() != 2)
-        //             throw std::runtime_error("Invalid state!");
-        //         // 1. 提取元数据
-        //         auto metadata = t[0].cast<py::tuple>();
-        //         shape_t shape = metadata[0].cast<shape_t>();
-        //         stride_t stride = metadata[1].cast<stride_t>();
-        //         int offset = metadata[2].cast<int>();
-        //         // 2. 提取存储数据
-        //         py::bytes data_bytes = t[1].cast<py::bytes>();
-        //         std::string data_str(data_bytes); // 拷贝数据  
-        //         // 3. 重建Storage
-        //         Storage storage(data_str.size() / sizeof(dtype));
-        //         std::memcpy(
-        //             storage.data.get(),
-        //             data_str.data(),
-        //             data_str.size()
-        //         );      
-        //         // 4. 重建Tensor
-        //         if (stride.empty()) {
-        //             // 连续张量
-        //             return Tensor(shape, stride, offset, std::move(storage));
-        //         } else {
-        //             // 非连续张量
-        //             return Tensor(shape, stride, offset, std::move(storage));
-        //         }
-        //     }
-        // ))
+        .def(py::pickle(
+            // __getstate__: 序列化
+            [](const at::Tensor& t) {
+                // 提取 shape
+                shape_t shape = t.get_shape();
+                // 提取数据
+                const Storage& storage = t.get_storage();
+                std::vector<at::dtype> data(storage.size);
+                std::memcpy(data.data(), storage.data.get(), storage.size * sizeof(at::dtype));
+
+                // 返回tuple: (shape, data list)
+                return py::make_tuple(shape, data);
+            },
+            // __setstate__: 反序列化
+            [](py::tuple t) {
+                if (t.size() != 2)
+                    throw std::runtime_error("Invalid state for TensorBase!");
+                shape_t shape = t[0].cast<shape_t>();
+                std::vector<at::dtype> data = t[1].cast<std::vector<at::dtype>>();
+
+                return at::Tensor(shape, data);
+            }
+        ))
 
         /*** Part I: constructors, assignments, destructors, and item() ***/
         /* constructors */
@@ -105,13 +83,10 @@ PYBIND11_MODULE(clownpiece, m) {
             parse_nested_list(list, data, shape, 0);
             return new at::Tensor(shape, data);
         }), py::arg("data"))
+
         /* assignments */
         .def("__copy__", &at::Tensor::clone, "Create a copy of the tensor")
         .def("__deepcopy__", &at::Tensor::clone, "Create a deep copy of the tensor")
-        // .def("assign", [](at::Tensor& self, at::dtype value) { // May need change!! Ask fAKe
-        //     self = value;
-        //     return self;
-        // }, py::arg("value"), "Assign a scalar value to a singleton tensor")
 
         /* item() */
         .def("item", &at::Tensor::item, "Get the single value of a singleton tensor")
@@ -263,7 +238,7 @@ PYBIND11_MODULE(clownpiece, m) {
     /*** Part II: utils, clone, make contiguous and copy_ ***/
     m.def("numel", [](at::Tensor& self) {
         return self.numel();
-    }, "Calculate the number of elements in a tensor given its shape");
+    }, py::arg("self"), "Calculate the number of elements in a tensor given its shape");
 
     /*** Part IV: Element-wise Binary and Unary Operators ***/
     m.def("__eq__", [](const at::Tensor &a, const at::Tensor &b) {

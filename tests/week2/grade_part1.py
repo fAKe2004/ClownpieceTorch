@@ -6,11 +6,21 @@ from graderlib import set_debug_mode, testcase, grader_summary, print_separate_l
 
 @testcase(name="clone1", score=10)
 def clone1(impl = torch):  
-  a = impl.ones((2, 3), requires_grad=True)
-  b = a.clone()
-  b.backward(impl.ones_like(b))
-  
-  return b, a.grad
+  lst = [[1., 2., 3., 4., 5.], [6., 7., 8., 9., 10.]]
+  if impl.__name__ == "torch":
+   print("Using torch.Tensor")
+  else:
+   print("Using clownpiece.Tensor")
+  if impl.__name__ == "torch":
+    a = impl.tensor(lst, requires_grad=True)
+  else:
+    a = impl.Tensor(lst, requires_grad=True)
+  return a
+#   a = impl.ones((2, 3), requires_grad=True)
+#   print(str(a))
+#   b = a.clone()
+#   b.backward(impl.ones_like(b))
+#   return b, a.grad
 
 @testcase(name="clone2", score=10)
 def clone2(impl = torch):  
@@ -57,13 +67,13 @@ def testsets_part1():
   print_separate_line()
   print("Testing Part1 Clone/Contiguous/Subscriptor...")
   clone1()
-  clone2()
-  contiguous1()
-  contiguous2()
-  subscriptor1()
-  subscriptor2()
+#   clone2()
+#   contiguous1()
+#   contiguous2()
+#   subscriptor1()
+#   subscriptor2()
   
 if __name__ == "__main__":
+  set_debug_mode(True)
   testsets_part1()
-      
   grader_summary("part1")

@@ -1,8 +1,6 @@
-import numpy as np
-
-
+from .clownpiece import TensorBase
+import clownpiece as cp
 from typing import TYPE_CHECKING, List, Optional, Union
-import numpy as np
 import copy
 import importlib
 
@@ -26,109 +24,54 @@ def is_grad_enabled_with_params(*args):
   
   return is_grad_enabled() and any(tensor.requires_grad for tensor in flatten_args if isinstance(tensor, Tensor))
 
+
 """
-  Tensor Base Class
+    Utils for Binding
 """
 
-class TensorBase(np.ndarray):
-  
-  def __new__(cls, input_array):
-    obj = np.asarray(input_array).view(cls)
-    return obj
-  
-  def clone(self):
-    return copy.deepcopy(self)
-  def contiguous(self):
-    return TensorBase(np.ascontiguousarray(self))
-  def transpose(self, dim0=-1, dim1=-2):
-    return TensorBase(super().swapaxes(dim0, dim1))
-  def copy_(self, other):
-    self[:] = other
-  def scatter_(self, dim, index, src):
-    data = self.copy()
-    shape_dim = data.shape[dim]
-    data = data.swapaxes(-1, dim)
-    data = data.reshape((-1, shape_dim))
-    index = index.reshape(-1)
-    src = src.reshape(-1)
-    for i in range(len(index)):
-      data[i][index[i]] = src[i]
-    data = data.swapaxes(-1, dim)
-    data = data.reshape(self.shape)
-    self.copy_(data)
-    
-  def unsqueeze(self, dim=0):
-    return TensorBase(np.expand_dims(self, axis=dim))
-  
-  def __neg__(self): return TensorBase(super().__neg__())
-  def sign(self): return TensorBase(np.sign(self))
-  def abs(self): return TensorBase(np.abs(self))
-  def sin(self): return TensorBase(np.sin(self))
-  def cos(self): return TensorBase(np.cos(self))
-  def tanh(self): return TensorBase(np.tanh(self))
-  def clamp(self, min_val, max_val): return TensorBase(np.clip(self, min_val, max_val))
-  def log(self): return TensorBase(np.log(self))
-  def exp(self): return TensorBase(np.exp(self))
-  def pow(self, exponent): return TensorBase(np.power(self, exponent))
-  def sqrt(self): return TensorBase(np.sqrt(self))
+"""
+    Wrap scalar args to singleton Tensor (requires_grad = False)
+"""
+def scalar_to_tensor(function):
+    def wrapped_function(*args, **kwargs):
+        new_args = []
+        for arg in args:
+            if isinstance(arg, (int, float)):
+                new_args.append(Tensor(arg, requires_grad=False))
+            else:
+                new_args.append(arg)
+        return function(*new_args, **kwargs)
+    return wrapped_function
 
-  def matmul(self, other): return TensorBase(np.matmul(self, other))
-  
-  def dim(self): return len(self.shape)
-  
-  def sum(self, dim=-1, keepdims=False):
-    return TensorBase(super(TensorBase, self).sum(axis=dim, keepdims=keepdims))
-  
-  def max(self, dim=-1, keepdims=False):
-    return TensorBase(super(TensorBase, self).max(axis=dim, keepdims=keepdims)), TensorBase(np.argmax(self, axis=dim, keepdims=keepdims))
-  def softmax(self, dim=-1):
-    exp_tensor = np.exp(self)
-    sum_tensor = exp_tensor.sum(dim=dim, keepdims=True)
-    result = TensorBase(exp_tensor / sum_tensor)
-    return result
-  
-  def permute(self, perm: List[int]):
-    return TensorBase(np.transpose(self, axes=perm))
-  def reshape(self, shape: List[int]):
-    return TensorBase(np.reshape(self, shape))
-  def view(self, shape: List[int]):
-    return TensorBase(np.reshape(self, shape))
-  def narrow(self, dim: int, start: int, length: int):
-    slices = [slice(None)] * self.dim()
-    slices[dim] = slice(start, start + length)
-    return TensorBase(self[tuple(slices)])
-  def chunk(self, chunks: int, dim: int = 0):
-    split_sections = [(self.shape[dim] + chunks - 1) // chunks] * chunks
-    split_indices = [sum(split_sections[:i]) for i in range(1, len(split_sections))] # omit last one
-    splitted = np.array_split(self, split_indices, axis=dim)
-    return [TensorBase(t) for t in splitted]
-  
-  def split(self, split: Union[int, List[int]], dim: int = 0):
-    if isinstance(split, list):
-      split = [sum(split[:i]) for i in range(1, len(split))] # omit last one
-    return [TensorBase(t) for t in np.array_split(self, split, axis=dim)]
-  
-  @staticmethod
-  def cat(inputs: List["TensorBase"], dim: int = 0):
-    return TensorBase(np.concatenate([np.asarray(t) for t in inputs], axis=dim))
-  @staticmethod
-  def stack(inputs: List["TensorBase"], dim: int = 0):
-    return TensorBase(np.stack([np.asarray(t) for t in inputs], axis=dim))
-  def broadcast_to(self, shape):
-    return TensorBase(np.broadcast_to(self, shape))
-  @staticmethod
-  def broadcast(inputs: List["TensorBase"]):
-    outputs = np.broadcast_arrays(*inputs)
-    outputs = [TensorBase(o) for o in outputs]
-    return outputs
-  
+"""
+    Wrap around a Tensor operator that traces gradient.
+    @arg: op_name: the name of the TensorBase method to call.
+    @arg: Function_name: the name of the Function class to use for autograd.
+"""
+def tensor_op(op_name, Function_name):
+    def decorator(function):
+        def wrapped_function(self, *args, **kwargs):
+            if not is_grad_enabled_with_params(*args):
+                op = getattr(TensorBase, op_name)
+                raw_results = op(self._cdata, *args, **kwargs)
+                def TensorBase2Tensor(x):
+                    return Tensor(x, requires_grad=False) if isinstance(x, TensorBase) else x
+                if isinstance(raw_results, (list, tuple)):
+                    return tuple(TensorBase2Tensor(x) for x in raw_results)
+                else:
+                    return TensorBase2Tensor(raw_results)
+            module = importlib.import_module("clownpiece.autograd.function")
+            FunctionClass = getattr(module, Function_name)
+            return function(*args, **kwargs, FunctionClass=FunctionClass)
+        return wrapped_function
+    return decorator
   
 """
   Tensor Class 
 """
 
 
-class Tensor(TensorBase):
+class Tensor():
   requires_grad: bool
   grad_fn: Optional["Function"]
   grad: Optional["Tensor"]
@@ -138,14 +81,17 @@ class Tensor(TensorBase):
   """
     Initialization
   """
-  def __new__(cls, input_array, requires_grad: bool = None):
-    obj = np.asarray(input_array).view(cls)
-  
-    obj.requires_grad_(requires_grad)
-    obj.grad_fn = None
-    obj.grad = None
-    obj.output_nr = 0
-    return obj
+  def __init__(self, input_array, requires_grad: bool = None):
+    print("Tensor.__new__ input type:", type(input_array))
+    if isinstance(input_array, cp.TensorBase):
+      self._cdata = input_array
+    else:
+      self._cdata = cp.TensorBase(input_array)
+      
+    self.requires_grad_(requires_grad)
+    self.grad_fn = None
+    self.grad = None
+    self.output_nr = 0
 
   def __array_finalize__(self, obj):
     # if obj is None:
@@ -175,54 +121,18 @@ class Tensor(TensorBase):
       requires_grad = is_grad_enabled()
     self.requires_grad = requires_grad 
   
-  """
-    Utils for Binding
-  """
-
-  """
-    Wrap scalar args to singleton Tensor (requires_grad = False)
-  """
-  @staticmethod
-  def scalar_to_tensor(function):
-    def wrapped_function(*args, **kwargs):
-      new_args = []
-      for arg in args:
-        if isinstance(arg, (int, float)):
-          new_args.append(Tensor(arg, requires_grad=False))
-        else:
-          new_args.append(arg)
-      return function(*new_args, **kwargs)
-    return wrapped_function
+  @property
+  def shape(self):
+    # print("self._cdata.shape=", self._cdata.shape)
+    return self._cdata.shape
   
-  """
-    Wrap around a Tensor operator that traces gradient.
-    @arg: op_name: the name of the TensorBase method to call.
-    @arg: Function_name: the name of the Function class to use for autograd.
-  """
-  @staticmethod
-  def tensor_op(op_name, Function_name):
-    def decorator(function):
-      def wrapped_function(*args, **kwargs):
-      
-        if not is_grad_enabled_with_params(*args):
-          op = getattr(TensorBase, op_name)
-          raw_results = op(*args, **kwargs)
-          
-          def TensorBase2Tensor(x):
-            return Tensor(x, requires_grad=False) if isinstance(x, TensorBase) else x
-          
-          if isinstance(raw_results, (list, tuple)):
-            return tuple(TensorBase2Tensor(x) for x in raw_results)
-          else:
-            return TensorBase2Tensor(raw_results)
-        
-        module = importlib.import_module("clownpiece.autograd.function")
-        FunctionClass = getattr(module, Function_name)
+  def __len__(self)->int:
+    return cp.numel(self._cdata)
+  
 
-        return function(*args, **kwargs, FunctionClass=FunctionClass)
-      
-      return wrapped_function
-    return decorator
+  def __getitem__(self, index):
+    # 返回新的Python Tensor实例，包含底层切片TensorBase
+    return Tensor(self[index], requires_grad=self.requires_grad)
       
   """
     Operator Binding for Autograd
@@ -242,6 +152,11 @@ class Tensor(TensorBase):
   @tensor_op('__getitem__', 'Subscriptor')
   def __getitem__(self, index, FunctionClass=None)->"Tensor":
     return FunctionClass().apply(self, index)
+  
+  @tensor_op('item', 'Item')
+  def item(self)->float:
+    return self._cdata.item()
+    # return FunctionClass().apply(self, index)
     
   """
     Part 2
@@ -382,7 +297,8 @@ class Tensor(TensorBase):
 
   @tensor_op('reshape', 'Reshape')
   def reshape(self, shape: List[int], FunctionClass=None) -> "Tensor":
-      return FunctionClass().apply(self, shape)
+      tb = self._cdata.reshape(shape)
+      return Tensor(tb, requires_grad=self.requires_grad)
 
   @tensor_op('view', 'View')
   def view(self, shape: List[int], FunctionClass=None) -> "Tensor":
@@ -433,7 +349,7 @@ class Tensor(TensorBase):
   
   def __repr__(self):    
     grad_fn_name = self.grad_fn.__class__.__name__ if self.grad_fn else None
-    return f"Tensor({super().__repr__()}, requires_grad={self.requires_grad}, grad_fn={grad_fn_name})"
+    return f"Tensor({self._cdata.__repr__()}, requires_grad={self.requires_grad}, grad_fn={grad_fn_name})"
   
 def stack(inputs: List[Tensor], dim: int = 0) -> Tensor:
   return Tensor.stack(inputs, dim)
@@ -449,19 +365,23 @@ def broadcast(inputs: List[Tensor]) -> Tensor:
 """
   
 def empty(shape, requires_grad: bool = False) -> Tensor:
-  return Tensor(np.empty(shape), requires_grad=requires_grad)
+  return Tensor(cp.empty(shape), requires_grad=requires_grad)
 
 def empty_like(tensor: Tensor, requires_grad: bool = False) -> Tensor:
-  return Tensor(np.empty_like(tensor), requires_grad=requires_grad)
+  return Tensor(cp.empty_like(tensor), requires_grad=requires_grad)
 
 def zeros(shape, requires_grad: bool = False) -> Tensor:
-  return Tensor(np.zeros(shape), requires_grad=requires_grad)
+  return Tensor(cp.zeros(shape), requires_grad=requires_grad)
 
 def zeros_like(tensor: Tensor, requires_grad: bool = False) -> Tensor:
-  return Tensor(np.zeros_like(tensor), requires_grad=requires_grad)
+  return Tensor(cp.zeros_like(tensor), requires_grad=requires_grad)
 
 def ones(shape, requires_grad: bool = False) -> Tensor:
-  return Tensor(np.ones(shape), requires_grad=requires_grad)
+    if len(shape) == 1 and isinstance(shape[0], (list, tuple)):
+        shape = list(shape[0])
+    else:
+        shape = list(shape)
+    return Tensor(cp.ones(shape), requires_grad=requires_grad)
 
 def ones_like(tensor: Tensor, requires_grad: bool = False) -> Tensor:
-  return Tensor(np.ones_like(tensor), requires_grad=requires_grad)
+  return Tensor(cp.ones_like(tensor), requires_grad=requires_grad)
