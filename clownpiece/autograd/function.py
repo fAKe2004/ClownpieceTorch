@@ -116,6 +116,7 @@ class AccumulateGrad(Function):
 class Clone(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
+        print("CLONE:", input.shape)
         return input.clone()
     
     @staticmethod
@@ -324,6 +325,8 @@ class Clamp(Function):
         min_val = ctx.min_val
         max_val = ctx.max_val
         mask = (input_tensor > min_val) * (input_tensor < max_val)
+        print("CLAMP MASK:", mask)
+        print("CLAMP GRAD_OUTPUT:", grad_output)
         return grad_output * mask, None, None
 
 class Log(Function):
@@ -524,7 +527,6 @@ class Reshape(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor, shape: List[int]):
         ctx.input_shape = input.shape
-        print("SHAPE:", shape)
         ctx.output_shape = tuple(shape)
         return input.reshape(shape)
     

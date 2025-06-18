@@ -25,6 +25,13 @@ def simple_index1(impl = torch):
     a = impl.Tensor(lst)
     b = a.clone()
     b[0] = 100
+    # import pickle
+    # p = a[1:5]
+    # print("Original Tensor=", p)
+    # s = pickle.dumps(p)
+    # print("Serialized=", s)
+    # t = pickle.loads(s)
+    # # return a[1]
     return (a[1], a[4], a[5], b)
 
 @testcase(name="simple_index2: Valid operations", score=10)
@@ -105,6 +112,6 @@ def testsets_part3():
 
 if __name__ == "__main__":
   print("Beginning grading part 3")
-  set_debug_mode(True)
+#   set_debug_mode(True)
   testsets_part3()
   grader_summary("part3")

@@ -334,6 +334,8 @@ Refer to the [official installation guide](https://pytorch.org/get-started/local
 pip install torch torchvision torchaudio
 ```
 
+**If you encounter any problems with pybind, don't hesitate to consult MasterFHC**
+
 ---
 
 ## Code Structure Overview
@@ -346,8 +348,9 @@ clownpiece
 | |- tensor.h
 | |- tensor.cc
 | |- tensor.py
-| |- binding.cc
-| |- setup.py
+| |- tensor_pybind.cc
+|- __init__.py
+|- setup.py
 |... # rest of the project
 ```
 *   **`meta.h` / `meta.cc`**: These files handle fundamental definitions and utilities.
@@ -361,7 +364,7 @@ clownpiece
 
 *   **`tensor.py`**: This file defines a Python `Tensor` class. This Python class will act as a wrapper around the C++ `Tensor` object that you build. In general, you should not need to make significant changes to this file, as it primarily delegates calls to the C++ backend.
 
-*   **`binding.cc`**: This file uses the `pybind11` library to expose your C++ `Tensor` class and its methods to Python. It creates the necessary bindings so that the `tensor.py` wrapper can call your C++ code. You generally won't need to modify this file.
+*   **`tensor_pybind.cc`**: This file uses the `pybind11` library to expose your C++ `Tensor` class and its methods to Python. It creates the necessary bindings so that the `tensor.py` wrapper can call your C++ code. You generally won't need to modify this file.
 
 *   **`setup.py`**: This script is used to compile your C++ source files (`tensor.cc`, `meta.cc`, `binding.cc`) into a shared library (a Python extension module, e.g., a `.so` file on Linux or `.pyd` on Windows). This allows Python to import and use your C++ tensor library.
 
@@ -378,7 +381,7 @@ run the following command to recompile your code
 
 then, go to directory `tests/week1` to run test scripts.
 
-There is one test script `grade_part{i}.py` for each part of code below, and a comprehensive test script: `grade_all.py`
+There is one test script `grade_part{i}.py` for each part of code below, and a comprehensive test script: `grade_comprehensive.py`, as a lifesaver, you can run `grade_all.py` to test all `grade_part{i}.py` at once!
 
 **Important Remark: For all invalid cases and exceptions (out_of_range, invalid_argument, etc.), your code must throw instance of `std::runtime_error` to be properly graded with test scripts**
 

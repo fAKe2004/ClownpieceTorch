@@ -75,7 +75,7 @@ def softmax2(impl=torch):
                      [[31., 32., -33., 34., 35.], [36., 37., 38., 39., -40.]]])
     return a.softmax(dim = 1)
 
-def testsets_sum_max_softmax():
+def testsets_part6():
     sum1()
     sum2()
     sum3()
@@ -90,5 +90,5 @@ def testsets_sum_max_softmax():
 if __name__ == "__main__":
     print("Beginning grading part6")
     # set_debug_mode(True)
-    testsets_sum_max_softmax()
+    testsets_part6()
     grader_summary("part6")

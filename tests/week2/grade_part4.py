@@ -190,6 +190,7 @@ def testsets_part4():
   matmul_lbmat_rbmat()
   
 if __name__ == "__main__":
+#   set_debug_mode(True)
   testsets_part4()
   
   grader_summary("Matmul")

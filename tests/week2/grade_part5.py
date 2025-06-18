@@ -51,6 +51,7 @@ def softmax_op(impl=torch):
 def testsets_part5():
     print_separate_line()
     print("Testing Part5 Max, Sum, Softmax...")
+    set_debug_mode(True)
     max_op()
     sum_op()
     softmax_op()

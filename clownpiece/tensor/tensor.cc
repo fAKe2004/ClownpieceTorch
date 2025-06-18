@@ -481,8 +481,28 @@ namespace at {
     shape_t new_shape = shape_;
     new_shape[0] = slice.second - slice.first;
     int new_offset = offset_ + slice.first * stride_[0];
-
-    return Tensor(new_shape, stride_, new_offset, storage_);
+    // std::cout<<"new_shape="<<new_shape<<std::endl;
+    // std::cout<<"stride_="<<stride_<<std::endl;
+    // std::cout<<"new_offset="<<new_offset<<std::endl;
+    // std::cout<<"storage.size="<<storage_.size<<std::endl;
+    // for(int i = 0; i < storage_.size; i++) {
+    //   std::cout<<storage_[i]<<" ";
+    // }
+    // std::cout<<std::endl;
+    auto ret = Tensor(new_shape, stride_, new_offset, storage_);
+    // std::cout<<"Tensor::operator[]: new shape="<<ret.get_shape()<<std::endl;
+    // for (const auto& dim : ret.get_shape()) {
+    //     std::cout<<dim<<" ";
+    // }
+    // std::cout<<std::endl;
+    // std::cout<<"Tensor::operator[]: new offset="<<ret.get_offset()<<std::endl;
+    // std::cout<<"Tensor::operator[]: new storage size="<<ret.get_storage().size<<std::endl;
+    // std::cout<<"Tensor::operator[]: new storage data=";
+    // for (int i = 0; i < ret.get_storage().size; i++) {
+    //   std::cout<<ret.get_storage()[i]<<" ";
+    // }
+    // std::cout<<std::endl;
+    return ret;
   }
 
   Tensor Tensor::operator[](const veci& index) const {
@@ -1068,7 +1088,8 @@ namespace at {
 
   Tensor ones(const shape_t& shape) {
     if (shape.empty())
-      throw std::runtime_error("ones: shape cannot be empty");
+        return Tensor({1}, 1.0);
+    //   throw std::runtime_error("ones: shape cannot be empty");
     return Tensor(shape, 1.0);
   }
   Tensor ones_like(const Tensor& ref) {

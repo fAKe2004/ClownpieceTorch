@@ -4,6 +4,7 @@
 #include <sstream>
 #include "tensor.h"
 #include "meta.h"
+#include <string>
 
 namespace py = pybind11;
 using shape_t = at::shape_t;
@@ -42,25 +43,69 @@ PYBIND11_MODULE(clownpiece, m) {
             "Change the data at the specified index. This is for graderlib use only.")
         .def("tolist", &tensor_to_list)
         .def(py::pickle(
-            // __getstate__: 序列化
             [](const at::Tensor& t) {
-                // 提取 shape
+                std::cout<<"Serializing TensorBaseImpl to Python tuple..."<<std::endl;
                 shape_t shape = t.get_shape();
-                // 提取数据
-                const Storage& storage = t.get_storage();
-                std::vector<at::dtype> data(storage.size);
-                std::memcpy(data.data(), storage.data.get(), storage.size * sizeof(at::dtype));
-
-                // 返回tuple: (shape, data list)
+                std::vector<at::dtype> data;
+                std::cout<<"Shape=";
+                for (const auto& dim : shape) {
+                    std::cout<<dim<<" ";
+                }
+                std::cout<<std::endl;
+                if (t.is_contiguous()) {
+                    std::cout<<"Tensor is contiguous, using storage directly."<<std::endl;
+                    const Storage& storage = t.get_storage();
+                    data.resize(storage.size);
+                    std::memcpy(data.data(), storage.data.get(), storage.size * sizeof(at::dtype));
+                    std::cout<<"Data=";
+                    for (const auto& val : data) {
+                        std::cout<<val<<" ";
+                    }
+                    std::cout<<std::endl;
+                    
+                } else {
+                    std::cout<<"Tensor is not contiguous, sampling elements."<<std::endl;
+                    // 逐元素采样
+                    size_t ndim = shape.size();
+                    std::vector<size_t> indices(ndim, 0);
+                    size_t total = 1;
+                    for (auto d : shape) total *= d;
+                    data.reserve(total);
+                    while (true) {
+                        // indices: vector<size_t> -> vector<int>
+                        std::vector<int> int_indices;
+                        int_indices.reserve(indices.size());
+                        for (auto idx : indices) int_indices.push_back(static_cast<int>(idx));
+                        data.push_back(t[int_indices].item()); // 用你的标量提取方法
+                        // 增加 indices
+                        int dim = ndim - 1;
+                        while (dim >= 0) {
+                            indices[dim]++;
+                            if (indices[dim] < static_cast<size_t>(shape[dim])) break;
+                            indices[dim] = 0;
+                            dim--;
+                        }
+                        if (dim < 0) break;
+                    }
+                }
                 return py::make_tuple(shape, data);
             },
-            // __setstate__: 反序列化
             [](py::tuple t) {
                 if (t.size() != 2)
                     throw std::runtime_error("Invalid state for TensorBase!");
                 shape_t shape = t[0].cast<shape_t>();
+                std::cout<<"Deserializing TensorBaseImpl from Python tuple..."<<std::endl;
+                std::cout<<"Shape=";
+                for (const auto& dim : shape) {
+                    std::cout<<dim<<" ";
+                }
+                std::cout<<std::endl;
                 std::vector<at::dtype> data = t[1].cast<std::vector<at::dtype>>();
-
+                std::cout<<"Data=";
+                for (const auto& val : data) {
+                    std::cout<<val<<" ";
+                }
+                std::cout<<std::endl;
                 return at::Tensor(shape, data);
             }
         ))
@@ -113,14 +158,34 @@ PYBIND11_MODULE(clownpiece, m) {
 
         /*** Part III: subscriptor ***/
         .def("__getitem__", [](const at::Tensor &self, const at::veci &index) {
+            // std::cout<<"Getting tensor with vector of indices: ";
             return self[index];
         }, "Get a tensor using a vector of indices")
         .def("__getitem__", [](const at::Tensor &self, int index) {
+            // std::cout<<"Getting tensor with single index: "<<index<<std::endl;
             return self[index];
         }, "Get a tensor using a single index")
         .def("__getitem__", [](const at::Tensor &self, py::object idx) {
+            // std::cout<<"Getting tensor with index object: "<<py::str(idx)<<std::endl;
             auto slices = parse_index(self, idx);
-            return self[slices];
+            auto p = self[slices];
+            // std::cout<<"new_shape=";
+            // for (const auto& dim : p.get_shape()) {
+            //     std::cout<<dim<<" ";
+            // }
+            // std::cout<<std::endl;
+            // std::cout<<"stride_=";
+            // for (const auto& dim : p.get_stride()) {
+            //     std::cout<<dim<<" ";
+            // }
+            // std::cout<<std::endl;
+            // std::cout<<"storage.size="<<p.numel()<<std::endl;
+            // for(int i = 0; i < p.numel(); i++) {
+            //   std::cout<<p[i]<<" ";
+            // }
+            // std::cout<<std::endl;
+            return p;
+            
         }, "Get a sliced tensor (supports int, slice, tuple of int/slice)")
 
         .def("__setitem__", [](at::Tensor& self, const at::veci& index, float value) {
@@ -146,51 +211,39 @@ PYBIND11_MODULE(clownpiece, m) {
 
 
         /*** Part IV: Element-wise Binary and Unary Operators ***/
-        .def(py::self <= py::self)
-        .def(py::self <  py::self)
-        .def(py::self >= py::self)
-        .def(py::self >  py::self)
-        .def(py::self == py::self)
-        .def(py::self != py::self)
-        .def("__neg__", [](const at::Tensor &a) {
-            return -a;
-        })
-        .def("__add__", [](const at::Tensor &a, const at::Tensor &b) {
-            return a + b;
-        })
-        .def("__add__", [](const at::Tensor &a, at::dtype &b) {
-            return a + b;
-        })
-        .def("__radd__", [](const at::Tensor &a, at::dtype &b) {
-            return a + b;
-        })
-        .def("__sub__", [](const at::Tensor &a, const at::Tensor &b) {
-            return a - b;
-        })
-        .def("__sub__", [](const at::Tensor &a, at::dtype &b) {
-            return a - b;
-        })
-        .def("__rsub__", [](const at::Tensor &a, at::dtype &b) {
-            return b - a;
-        })
-        .def("__mul__", [](const at::Tensor &a, const at::Tensor &b) {
-            return a * b;
-        })
-        .def("__mul__", [](const at::Tensor &a, at::dtype &b) {
-            return a * b;
-        })
-        .def("__rmul__", [](const at::Tensor &a, at::dtype &b) {
-            return a * b;
-        })
-        .def("__truediv__", [](const at::Tensor &a, const at::Tensor &b) {
-            return a / b;
-        })
-        .def("__truediv__", [](const at::Tensor &a, at::dtype &b) {
-            return a / b;
-        })
-        .def("__rtruediv__", [](const at::Tensor &a, at::dtype &b) {
-            return b / a;
-        })
+        .def("__gt__", [](const at::Tensor &a, const at::Tensor &b) { return a > b; })
+        .def("__gt__", [](const at::Tensor &a, at::dtype b) { return a > at::Tensor(b); })
+        .def("__gt__", [](at::dtype a, const at::Tensor &b) { return at::Tensor(a) > b; })
+        .def("__ge__", [](const at::Tensor &a, const at::Tensor &b) { return a >= b; })
+        .def("__ge__", [](const at::Tensor &a, at::dtype b) { return a >= at::Tensor(b); })
+        .def("__ge__", [](at::dtype a, const at::Tensor &b) { return at::Tensor(a) >= b; })
+        .def("__lt__", [](const at::Tensor &a, const at::Tensor &b) { return a < b; })
+        .def("__lt__", [](const at::Tensor &a, at::dtype b) { return a < at::Tensor(b); })
+        .def("__lt__", [](at::dtype a, const at::Tensor &b) { return at::Tensor(a) < b; })
+        .def("__le__", [](const at::Tensor &a, const at::Tensor &b) { return a <= b; })
+        .def("__le__", [](const at::Tensor &a, at::dtype b) { return a <= at::Tensor(b); })
+        .def("__le__", [](at::dtype a, const at::Tensor &b) { return at::Tensor(a) <= b; })
+        .def("__eq__", [](const at::Tensor &a, const at::Tensor &b) { return a == b; })
+        .def("__eq__", [](const at::Tensor &a, at::dtype b) { return a == at::Tensor(b); })
+        .def("__eq__", [](at::dtype a, const at::Tensor &b) { return at::Tensor(a) == b; })
+        .def("__ne__", [](const at::Tensor &a, const at::Tensor &b) { return a != b; })
+        .def("__ne__", [](const at::Tensor &a, at::dtype b) { return a != at::Tensor(b); })
+        .def("__ne__", [](at::dtype a, const at::Tensor &b) { return at::Tensor(a) != b; })
+
+        .def("__neg__", [](const at::Tensor &a) {return -a;})
+        .def("__add__", [](const at::Tensor &a, const at::Tensor &b) {return a + b;})
+        .def("__add__", [](const at::Tensor &a, at::dtype &b) {return a + b;})
+        .def("__radd__", [](const at::Tensor &a, at::dtype &b) {return a + b;})
+        .def("__sub__", [](const at::Tensor &a, const at::Tensor &b) {return a - b;})
+        .def("__sub__", [](const at::Tensor &a, at::dtype &b) {return a - b;})
+        .def("__rsub__", [](const at::Tensor &a, at::dtype &b) {   return b - a;})
+        .def("__mul__", [](const at::Tensor &a, const at::Tensor &b) {return a * b;})
+        .def("__mul__", [](const at::Tensor &a, at::dtype &b) {return a * b;})
+        .def("__rmul__", [](const at::Tensor &a, at::dtype &b) {return a * b;})
+        .def("__truediv__", [](const at::Tensor &a, const at::Tensor &b) {return a / b;})
+        .def("__truediv__", [](const at::Tensor &a, at::dtype &b) {return a / b;})
+        .def("__rtruediv__", [](const at::Tensor &a, at::dtype &b) {return b / a;})
+
         .def("sign", &at::Tensor::sign)
         .def("abs", &at::Tensor::abs)
         .def("__abs__", &at::Tensor::abs)
@@ -226,6 +279,26 @@ PYBIND11_MODULE(clownpiece, m) {
              "Return a view of the tensor with a new shape")
         .def("transpose", &at::Tensor::transpose, py::arg("dim0"), py::arg("dim1"),
          "Transpose the tensor along two dimensions")
+        .def("split", [](const at::Tensor &self, int dim, int split_size) {
+            // 分割 tensor
+            return self.split(dim, split_size);
+        }, py::arg("dim"), py::arg("split_size"), "Split the tensor into chunks along a dimension")
+        .def("split", [](const at::Tensor &self, int dim, const std::vector<int> &split_sections) {
+            // 分割 tensor
+            return self.split(dim, split_sections);
+        }, py::arg("dim"), py::arg("split_sections"), "Split the tensor into sections along a dimension")
+        .def_static("stack", [](const std::vector<at::Tensor> &tensors, int dim = 0) {
+            // 堆叠 tensor
+            return at::Tensor().stack(tensors, dim);
+        }, py::arg("tensors"), py::arg("dim") = 0, "Stack a list of tensors along a new dimension")
+        .def_static("cat", [](const std::vector<at::Tensor> &tensors, int dim = 0) {
+            // 拼接 tensor
+            return at::Tensor().cat(tensors, dim);
+        }, py::arg("tensors"), py::arg("dim") = 0, "Concatenate a list of tensors along a dimension")
+        .def_static("broadcast", [](const at::Tensor &lhs, const at::Tensor &rhs) {
+            // 广播两个 tensor
+            return at::Tensor().broadcast(lhs, rhs);
+        }, py::arg("lhs"), py::arg("rhs"), "Broadcast two tensors to a common shape")
         // 增加.T属性
         .def_property_readonly("T", [](const at::Tensor &self) {
             // 通常 2D tensor 的 .T 是 swap 0,1 轴；更高维可按需扩展
@@ -243,6 +316,12 @@ PYBIND11_MODULE(clownpiece, m) {
         .def_static("zeros_like", [](const at::Tensor &self) {
             return at::zeros_like(self);
         }, "Create a tensor of zeros with the same shape and type as another tensor")
+        .def_static("empty", [](std::vector<int> shape){
+            return at::empty(shape);
+        }, "Create an empty tensor with the specified shape and uninitialized data")
+        .def_static("empty_like", [](const at::Tensor &self) {
+            return at::empty_like(self);
+        }, "Create an empty tensor with the same shape and type as another tensor")
 
         ;
 
@@ -252,24 +331,65 @@ PYBIND11_MODULE(clownpiece, m) {
     }, py::arg("self"), "Calculate the number of elements in a tensor given its shape");
 
     /*** Part IV: Element-wise Binary and Unary Operators ***/
+    // __eq__ & __ne__
     m.def("__eq__", [](const at::Tensor &a, const at::Tensor &b) {
         return a == b;
     }, py::arg("a"), py::arg("b"), "Element-wise equality comparison");
+    m.def("__eq__", [](const at::Tensor &a, at::dtype b) {
+        return a == at::Tensor(b);
+    }, py::arg("a"), py::arg("b"), "Element-wise equality comparison with scalar");
+    m.def("__eq__", [](at::dtype a, const at::Tensor &b) {
+        return at::Tensor(a) == b;
+    }, py::arg("a"), py::arg("b"), "Element-wise equality comparison with scalar");
     m.def("__ne__", [](const at::Tensor &a, const at::Tensor &b) {
         return a != b;
     }, py::arg("a"), py::arg("b"), "Element-wise inequality comparison");
+    m.def("__ne__", [](const at::Tensor &a, at::dtype b) {
+        return a != at::Tensor(b);
+    }, py::arg("a"), py::arg("b"), "Element-wise inequality comparison with scalar");
+    m.def("__ne__", [](at::dtype a, const at::Tensor &b) {
+        return at::Tensor(a) != b;
+    }, py::arg("a"), py::arg("b"), "Element-wise inequality comparison with scalar");
+
+    // __lt__ & __le__
     m.def("__lt__", [](const at::Tensor &a, const at::Tensor &b) {
         return a < b;
     }, py::arg("a"), py::arg("b"), "Element-wise less than comparison");
+    m.def("__lt__", [](const at::Tensor &a, at::dtype b) {
+        return a < at::Tensor(b);
+    }, py::arg("a"), py::arg("b"), "Element-wise less than comparison with scalar");
+    m.def("__lt__", [](at::dtype a, const at::Tensor &b) {
+        return at::Tensor(a) < b;
+    }, py::arg("a"), py::arg("b"), "Element-wise less than comparison with scalar");
     m.def("__le__", [](const at::Tensor &a, const at::Tensor &b) {
         return a <= b;
     }, py::arg("a"), py::arg("b"), "Element-wise less than or equal to comparison");
-    m.def("__gt__", [](const at::Tensor &a, const at::Tensor &b) {
+    m.def("__le__", [](const at::Tensor &a, at::dtype b) {
+        return a <= at::Tensor(b);
+    }, py::arg("a"), py::arg("b"), "Element-wise less than or equal to comparison with scalar");
+    m.def("__le__", [](at::dtype a, const at::Tensor &b) {
+        return at::Tensor(a) <= b;
+    }, py::arg("a"), py::arg("b"), "Element-wise less than or equal to comparison with scalar");
+
+    // __gt__ & __ge__
+    m.def("__gt__", [](const at::Tensor &a, const at::Tensor &b) { 
         return a > b;
     }, py::arg("a"), py::arg("b"), "Element-wise greater than comparison");
+    m.def("__gt__", [](const at::Tensor &a, at::dtype b) {
+        return a > at::Tensor(b);
+    }, py::arg("a"), py::arg("b"), "Element-wise greater than comparison with scalar");
+    m.def("__gt__", [](at::dtype a, const at::Tensor &b) {
+        return at::Tensor(a) > b;
+    }, py::arg("a"), py::arg("b"), "Element-wise greater than comparison with scalar");
     m.def("__ge__", [](const at::Tensor &a, const at::Tensor &b) {
         return a >= b;
     }, py::arg("a"), py::arg("b"), "Element-wise greater than or equal to comparison");
+    m.def("__ge__", [](const at::Tensor &a, at::dtype b) {
+        return a >= at::Tensor(b);
+    }, py::arg("a"), py::arg("b"), "Element-wise greater than or equal to comparison with scalar");
+    m.def("__ge__", [](at::dtype a, const at::Tensor &b) {
+        return at::Tensor(a) >= b;
+    }, py::arg("a"), py::arg("b"), "Element-wise greater than or equal to comparison with scalar");
 
 
     m.def("sign", [](const at::Tensor& t) {
@@ -463,6 +583,7 @@ std::vector<slice_t> parse_index(const Tensor& self, const py::object &idx) {
 }
 
 Tensor tensor_reshape_wrapper(const Tensor &self, py::args args, bool copy = false) {
+    // std::cout<<"Reshaping tensor"<<std::endl;
     std::vector<int> shape;
     if (args.size() == 1 && py::isinstance<py::sequence>(args[0])) {
         shape = args[0].cast<std::vector<int>>();

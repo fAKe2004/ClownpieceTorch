@@ -98,8 +98,8 @@ def linspace2(impl):
     t = impl.linspace(-1, 1, 5)
     return t
 
-if __name__ == "__main__":
-    print("Beginning grading part8")
+
+def testsets_part8():
     ones1()
     ones_like1()
     zeros1()
@@ -114,4 +114,9 @@ if __name__ == "__main__":
     range2()
     linspace1()
     linspace2()
+    
+if __name__ == "__main__":
+    print("Beginning grading part8")
+    set_debug_mode(True)
+    testsets_part8()
     grader_summary("part8")

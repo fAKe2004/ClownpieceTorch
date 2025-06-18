@@ -118,6 +118,7 @@ def sqrt_op(impl=torch):
 def testsets_part2():
     print_separate_line()
     print("Testing Part2 Unary Operations...")
+    # set_debug_mode(True)
     neg_op()
     sign_op()
     abs_op()

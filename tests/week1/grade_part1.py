@@ -78,6 +78,6 @@ def testsets_part1():
 
 if __name__ == "__main__":
   print("Beginning grading part 1")
-  set_debug_mode(True)
+#   set_debug_mode(True)
   testsets_part1()
   grader_summary("part1")

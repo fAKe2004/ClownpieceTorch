@@ -47,13 +47,17 @@ def basic_calc3(impl = torch):
 def basic_calc4(impl = torch):
     a = impl.Tensor([[1, -2, 3], [4, 5, -6]])
     b = impl.Tensor([[7, -2, -9], [10, 6, -12]])
+    c = 3.0
 
     if impl.__name__ == "torch":
         return ((a == b).to(torch.int), (a != b).to(torch.int),
                 (a < b).to(torch.int), (a <= b).to(torch.int),
-                (a > b).to(torch.int), (a >= b).to(torch.int))
+                (a > b).to(torch.int), (a >= b).to(torch.int),
+                (a > c).to(torch.int), (a < c).to(torch.int),
+                (a >= c).to(torch.int), (a <= c).to(torch.int))
     else:
-        return (a == b, a != b, a < b, a <= b, a > b, a >= b)
+        return (a == b, a != b, a < b, a <= b, a > b, a >= b,
+                a > c, a < c, a >= c, a <= c)
     
 
 @testcase(name="broadcast1: Scalar Boardcasting", score=10)
@@ -130,6 +134,6 @@ def testsets_part4():
 
 if __name__ == "__main__":
   print("Beginning grading part 4")
-  set_debug_mode(True)
+#   set_debug_mode(True)
   testsets_part4()
   grader_summary("part4")
