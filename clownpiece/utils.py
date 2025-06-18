@@ -11,7 +11,7 @@ def use_cpp_tensor(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         old_tensor = clownpiece.Tensor
-        clownpiece.Tensor = clownpiece.TensorBase
+        clownpiece.Tensor = clownpiece.TensorBaseImpl
         try:
             return func(*args, **kwargs)
         finally:

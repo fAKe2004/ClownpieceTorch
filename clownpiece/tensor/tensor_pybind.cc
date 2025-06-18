@@ -22,13 +22,12 @@ Tensor tensor_view_wrapper(const Tensor &self, py::args args);
 py::object tensor_to_list(const at::Tensor& tensor);
 
 PYBIND11_MODULE(clownpiece, m) {
-
-    py::class_<at::Tensor>(m, "TensorBase")
+    py::class_<at::Tensor, std::shared_ptr<at::Tensor>>(m, "TensorBaseImpl")
         .def(py::init<>())
         .def("__repr__",
             [](const at::Tensor &t) {
                 std::ostringstream oss;
-                oss << "I AM CLOWNPIECE TENSOR!\n";
+                // oss << "I AM CLOWNPIECE TENSOR!\n";
                 oss << t;
                 return oss.str();
             }
@@ -231,7 +230,19 @@ PYBIND11_MODULE(clownpiece, m) {
         .def_property_readonly("T", [](const at::Tensor &self) {
             // 通常 2D tensor 的 .T 是 swap 0,1 轴；更高维可按需扩展
             return self.transpose(0, 1);
-        }, "Matrix transpose (swap axes 0 and 1)");
+        }, "Matrix transpose (swap axes 0 and 1)")
+        .def_static("ones", [](std::vector<int> shape){
+            return at::ones(shape);
+        })
+        .def_static("ones_like", [](const at::Tensor &self) {
+            return at::ones_like(self);
+        }, "Create a tensor of ones with the same shape and type as another tensor")
+        .def_static("zeros", [](std::vector<int> shape){
+            return at::zeros(shape);
+        })
+        .def_static("zeros_like", [](const at::Tensor &self) {
+            return at::zeros_like(self);
+        }, "Create a tensor of zeros with the same shape and type as another tensor")
 
         ;
 

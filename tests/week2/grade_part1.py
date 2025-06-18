@@ -10,17 +10,21 @@ def clone1(impl = torch):
   if impl.__name__ == "torch":
    print("Using torch.Tensor")
   else:
+   print("Using type = ", type(impl))
    print("Using clownpiece.Tensor")
   if impl.__name__ == "torch":
     a = impl.tensor(lst, requires_grad=True)
   else:
     a = impl.Tensor(lst, requires_grad=True)
-  return a
-#   a = impl.ones((2, 3), requires_grad=True)
+    print("a type:", type(a))
+    
+#   b = impl.ones((2, 3), requires_grad=True)
+#   print("b type:", type(b))
+#   return a
 #   print(str(a))
-#   b = a.clone()
-#   b.backward(impl.ones_like(b))
-#   return b, a.grad
+  b = a.clone()
+  b.backward(impl.ones_like(b))
+  return b, a.grad
 
 @testcase(name="clone2", score=10)
 def clone2(impl = torch):  

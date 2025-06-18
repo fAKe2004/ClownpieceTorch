@@ -79,6 +79,7 @@ def all_close(t1: TensorCT, t2: TensorT)->bool:
   is_tensor_t2 = isinstance(t2, (TensorCT, TensorT))
   
   if is_tensor_t1 != is_tensor_t2:
+    print(f"all_close: type mismatch: {type(t1)} vs {type(t2)}")
     return False
   
   if not is_tensor_t1 or not is_tensor_t2:
@@ -87,12 +88,14 @@ def all_close(t1: TensorCT, t2: TensorT)->bool:
   eps = 1e-4
   
   if tuple(t1.shape) != tuple(t2.shape):
+    print(f"all_close: shape mismatch: {t1.shape} vs {t2.shape}")
     return False
   
   t1 = t1.reshape(-1,)
   t2 = t2.reshape(-1,)
   for i in range(len(t1)):
     if abs(t1[i].item() - t2[i].item()) > eps:
+      print(f"all_close: value mismatch at index {i}: {t1[i].item()} vs {t2[i].item()}")
       return False
   
   return True
