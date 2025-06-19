@@ -27,10 +27,7 @@ Additionally, you will develop proficiency in Python programming.
 
 You will construct a functional mini deep learning framework similar to PyTorch:
 *   **Week 1:** A multi-threaded CPU-based tensor library in C++ with Python bindings
-*   **Week 2:** An autograd engine in C++ with differentiable operations implemented in Python
-
-~~Week 2 C++ 存疑了。我再考虑一下工作量~~
-
+*   **Week 2:** An autograd engine for differentiable operations implemented in Python
 *   **Week 3:** A module system in Python to create and manage neural network components, and implementation of common modules(Linear, Conv2D, ReLU, etc.)
 *   **Week 4:** A complete training pipeline with optimizers (SGD/Adam), schedulers, and dataloaders for building an image classification model
 
