@@ -342,7 +342,8 @@ pip install torch torchvision torchaudio
 
 ```bash
 clownpiece
-|--tensor # C++ tensor library
+|--autograd # This is for week2, you don't need it now
+|--tensor # The C++ tensor library you're going to implement
 | |- meta.h
 | |- meta.cc
 | |- tensor.h
@@ -351,7 +352,14 @@ clownpiece
 | |- tensor_pybind.cc
 |- __init__.py
 |- setup.py
-|... # rest of the project
+|- tensor.py # Bindings for week2 
+|... # rest of clownpiece
+tests
+|--week1 # testcases for week1
+| |- grade_part{1-8}.py
+| |- grade_all.py
+| |- grade_comprehensive.ipynb
+| |- graderlib.py
 ```
 *   **`meta.h` / `meta.cc`**: These files handle fundamental definitions and utilities.
     *   `meta.h` defines common types used throughout the tensor library, such as `dtype` (data type, e.g., float), `shape_t` (for tensor dimensions), `stride_t` (for tensor strides). It also declares random number generation functions.
@@ -377,11 +385,12 @@ clownpiece
 ## How to compile and test your code?
 
 run the following command to recompile your code
-> cd clownpiece/tensor && python setup.py
+> cd clownpiece && pip install -e .
 
-then, go to directory `tests/week1` to run test scripts.
+then, go to directory `tests/week1` to run test scripts or directly run 
+> python ../tests/week1/grade_part{i}.py
 
-There is one test script `grade_part{i}.py` for each part of code below, and a comprehensive test script: `grade_comprehensive.py`, as a lifesaver, you can run `grade_all.py` to test all `grade_part{i}.py` at once!
+There is one test script `grade_part{i}.py` for each part of code below, and a comprehensive test script: `grade_comprehensive.ipynb`, as a lifesaver, you can run `grade_all.py` to test all `grade_part{i}.py` at once!
 
 **Important Remark: For all invalid cases and exceptions (out_of_range, invalid_argument, etc.), your code must throw instance of `std::runtime_error` to be properly graded with test scripts**
 
@@ -1109,10 +1118,10 @@ We acknowledge that the workload for the first week is heavier than average. You
 
 ## Submit Your Homework
 
-First, make sure that you passed the `grade_all.py`.
+First, make sure that you passed the `grade_all.py` as well as `grade_comprehensive.ipynb`.
 
-Then, you should write a detailed **report** under `docs/week1`, to describe the challenges you have encountered, how did you solved them, and what are the takeaways. (Also, attach the output of `grade_all.py`.) This report accounts for part of your score.
+Then, you should write a detailed **report** under `docs/week1`, to describe the challenges you have encountered, how did you solve them, and what are the takeaways. (Also, attach the output of `grade_all.py` and the entire `grade_comprehensive.ipynb` with output.) This report accounts for part of your score.
 
 Finally zip the entire project folder into lab-week1.zip, and submit to canvas.
 
-Make sure that the TAs can run the `grade_all.py` and find your report from your submission.
+Make sure that the TAs can run the `grade_all.py` and `grade_comprehensive.ipynb` and find your report from your submission.
