@@ -1,6 +1,7 @@
 import sys
 import os
 
+
 self_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(self_path + "/../../")
 sys.path.append(self_path)
@@ -21,8 +22,6 @@ failed_test = []
 passed_test = []
 
 DEBUG_MODE = False
-
-# utils
 
 # EXPORT
 """

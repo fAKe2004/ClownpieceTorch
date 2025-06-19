@@ -3,14 +3,13 @@ import os
 
 
 import torch
-import clownpiece
 from graderlib import self_path
 from graderlib import set_debug_mode, testcase, grader_summary
 
-from utils import use_cpp_tensor
+
 
 @testcase(name="is_contiguous1: True case", score=10)
-@use_cpp_tensor
+
 def is_contiguous1(impl = torch):
     lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
     a = impl.Tensor(lst)
@@ -19,7 +18,7 @@ def is_contiguous1(impl = torch):
 # @testcase(name="is_contiguous2: False case", score=10)
 
 @testcase(name="simple_index1: Valid operations", score=10)
-@use_cpp_tensor
+
 def simple_index1(impl = torch):
     lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     a = impl.Tensor(lst)
@@ -35,7 +34,7 @@ def simple_index1(impl = torch):
     return (a[1], a[4], a[5], b)
 
 @testcase(name="simple_index2: Valid operations", score=10)
-@use_cpp_tensor
+
 def simple_index2(impl = torch):
     lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
     a = impl.Tensor(lst)
@@ -45,7 +44,7 @@ def simple_index2(impl = torch):
             a[0][3], a[1][3], a[0][4], a[1][4], b)
     
 @testcase(name="simple_index3: Invalid operations", score=10)
-@use_cpp_tensor
+
 def simple_index3(impl = torch):
     lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
     a = impl.Tensor(lst)
@@ -63,7 +62,7 @@ def simple_index3(impl = torch):
                 return True
             
 @testcase(name="simple_index4: Slice of data", score=10)
-@use_cpp_tensor
+
 def simple_index4(impl = torch):
     lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15], [16, 17, 18, 19, 20], [21, 22, 23, 24, 25]]
     a = impl.Tensor(lst)
@@ -72,7 +71,7 @@ def simple_index4(impl = torch):
     return (a[0], a[1], a[2], a[3], a[4], b[0])
             
 @testcase(name="simple_slice1: 1D tensor", score=10)
-@use_cpp_tensor
+
 def simple_slice1(impl = torch):
     # slice_t is a <int, int> pair, so operations like [1:8:2] is not supported
     lst = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -80,7 +79,7 @@ def simple_slice1(impl = torch):
     return (a[1:5], a[2:8], a[0:-1], a[2:-2], a[3:], a[:5], a[1:-8], a[1:-100])
 
 @testcase(name="simple_slice2: 2D tensor", score=10)
-@use_cpp_tensor
+
 def simple_slice2(impl = torch):
     lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15], [16, 17, 18, 19, 20], [21, 22, 23, 24, 25]]
     a = impl.Tensor(lst)
@@ -89,7 +88,7 @@ def simple_slice2(impl = torch):
             a[2:4][0:-1], a[1:-2][1:-3])
     
 @testcase(name="is_contiguous2: True case", score=10)
-@use_cpp_tensor
+
 def is_contiguous2(impl = torch):
     lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
     a = impl.Tensor(lst)

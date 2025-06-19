@@ -3,35 +3,34 @@ import os
 
 
 import torch
-import clownpiece
 from graderlib import self_path
 from graderlib import set_debug_mode, testcase, grader_summary
 
-from utils import use_cpp_tensor
+# 
 
 @testcase(name="init1: from list 1D", score=10)
-@use_cpp_tensor
+
 def init1(impl = torch):
   lst = [1, 2, 3, 4, 5]
   a = impl.Tensor(lst)
   return a
 
 @testcase(name="init2: from list 2D", score=10)
-@use_cpp_tensor
+
 def init2(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
   return a
 
 @testcase(name="init3: from list 4D", score=10)
-@use_cpp_tensor
+
 def init3(impl = torch):
   lst = [[[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]]]
   a = impl.Tensor(lst)
   return a
 
 @testcase(name="init4: scalar", score=10)
-@use_cpp_tensor
+
 def init4(impl = torch):
   scalar = 42
   if impl.__name__ == "torch":
@@ -41,7 +40,7 @@ def init4(impl = torch):
   return a
 
 @testcase(name="copy1: correctness of copy", score=10)
-@use_cpp_tensor
+
 def copy1(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
@@ -49,7 +48,7 @@ def copy1(impl = torch):
   return b
 
 @testcase(name="copy2: shallowness of copy", score=10)
-@use_cpp_tensor
+
 def copy2(impl = torch):
   lst = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
   a = impl.Tensor(lst)
@@ -61,7 +60,7 @@ def copy2(impl = torch):
   return a
 
 @testcase(name="item: singleton tensor", score=10)
-@use_cpp_tensor
+
 def item(impl = torch):
   lst = [[1]]
   a = impl.Tensor(lst)
@@ -78,6 +77,6 @@ def testsets_part1():
 
 if __name__ == "__main__":
   print("Beginning grading part 1")
-#   set_debug_mode(True)
+  set_debug_mode(True)
   testsets_part1()
   grader_summary("part1")

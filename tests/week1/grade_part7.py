@@ -3,14 +3,13 @@ import os
 
 
 import torch
-import clownpiece
 from graderlib import self_path
 from graderlib import set_debug_mode, testcase, grader_summary
 
-from utils import use_cpp_tensor
+
 
 @testcase(name="permute1: simple permutation", score=10)
-@use_cpp_tensor
+
 def permute1(impl=torch):
     # Ask fAKe for detailed information about "some dimensions may be missing"
     a = impl.Tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
@@ -21,7 +20,7 @@ def permute1(impl=torch):
             impl.permute(a, (2, 0, 1)))
 
 @testcase(name="transpose1: simple transpose", score=10)
-@use_cpp_tensor
+
 def transpose1(impl=torch):
     a = impl.Tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
     
@@ -31,7 +30,7 @@ def transpose1(impl=torch):
             impl.transpose(a, dim0 = 1, dim1 = 2))
     
 @testcase(name="transpose2: is_contiguous() and clone after transpose", score=10)
-@use_cpp_tensor
+
 def transpose2(impl=torch):
     a = impl.Tensor([[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
     
@@ -55,7 +54,7 @@ def transpose2(impl=torch):
     #         d1, d2, d3, d1.is_contiguous(), d2.is_contiguous(), d3.is_contiguous())
 
 @testcase(name="reshape1_noerror: all reshape/view should succeed", score=10)
-@use_cpp_tensor
+
 def reshape1_noerror(impl=torch):
     
     a0 = impl.Tensor([[1, 2, 3, 4], [5, 6, 7, 8]])
@@ -85,7 +84,7 @@ def reshape1_noerror(impl=torch):
     return (r0, r1, v1, r2, v2, r3, r4, r6, v4)
 
 @testcase(name="reshape1_error: reshape/view with expected error", score=10)
-@use_cpp_tensor
+
 def reshape1_error(impl=torch):
     # view on non-contiguous
     a = impl.Tensor([[1,2],[3,4],[5,6]])
@@ -112,7 +111,7 @@ def reshape1_error(impl=torch):
         return True
 
 @testcase(name="reshape2: reshape/view edge cases", score=10)
-@use_cpp_tensor
+
 def reshape2(impl=torch):
     # Reshape of scalar to (1,) and back (0-dimensional tensor)
     if impl.__name__ == "torch":
@@ -132,7 +131,7 @@ def reshape2(impl=torch):
     return (r1, v1, r2, v2, r3, v3)
 
 @testcase(name="narrow1_noerror: narrow views succeed", score=10)
-@use_cpp_tensor
+
 def narrow1_noerror(impl=torch):
     a = impl.Tensor([[ 0,  1,  2,  3,  4,  5],
                      [ 6,  7,  8,  9, 10, 11],
@@ -157,7 +156,7 @@ def narrow1_noerror(impl=torch):
     return (r1, r2, r3, r4, r5, r6)
 
 @testcase(name="narrow1_error: narrow with expected error", score=10)
-@use_cpp_tensor
+
 def narrow1_error(impl=torch):
     a = impl.Tensor([[ 0,  1,  2,  3,  4,  5],
                      [ 6,  7,  8,  9, 10, 11],
@@ -183,7 +182,7 @@ def narrow1_error(impl=torch):
         return True
 
 @testcase(name="chunk1: chunk on dim 0, divisible", score=10)
-@use_cpp_tensor
+
 def chunk1(impl=torch):
     a = impl.Tensor([[ 0,  1,  2,  3,  4,  5],
                      [ 6,  7,  8,  9, 10, 11],
@@ -192,7 +191,7 @@ def chunk1(impl=torch):
     return impl.chunk(a, 2, 0)  # 应返回2个(2,6)的tensor
 
 @testcase(name="chunk2: chunk on dim 1, divisible", score=10)
-@use_cpp_tensor
+
 def chunk2(impl=torch):
     a = impl.Tensor([[ 0,  1,  2,  3,  4,  5],
                      [ 6,  7,  8,  9, 10, 11],
@@ -201,27 +200,27 @@ def chunk2(impl=torch):
     return impl.chunk(a, 3, 1)  # 应返回3个(4,2)的tensor
 
 @testcase(name="chunk3: chunk on dim 1, not divisible", score=10)
-@use_cpp_tensor
+
 def chunk3(impl=torch):
     b = impl.Tensor([[ 0,  1,  2,  3,  4,  5,  6],
                      [ 7,  8,  9, 10, 11, 12, 13]])
     return impl.chunk(b, 3, 1)  # 应返回3个(2, 3/2/2)的tensor
 
 @testcase(name="chunk4: chunk on dim 0, not divisible", score=10)
-@use_cpp_tensor
+
 def chunk4(impl=torch):
     b = impl.Tensor([[ 0,  1,  2,  3,  4,  5,  6],
                      [ 7,  8,  9, 10, 11, 12, 13]])
     return impl.chunk(b, 4, 0)  # 应返回4个，每个shape (0或1,7)
 
 @testcase(name="chunk5: chunk 1d tensor", score=10)
-@use_cpp_tensor
+
 def chunk5(impl=torch):
     d = impl.Tensor([0, 1, 2, 3, 4])
     return impl.chunk(d, 2, 0)  # 应返回2个(3,)和(2,)的tensor
 
 @testcase(name="chunk1_error: chunk with expected error", score=10)
-@use_cpp_tensor
+
 def chunk_error(impl=torch):
     a = impl.Tensor([[ 0,  1,  2,  3],
                      [ 4,  5,  6,  7],
@@ -245,63 +244,63 @@ def chunk_error(impl=torch):
         return True
 
 @testcase(name="split1", score=10)
-@use_cpp_tensor
+
 def split1(impl=torch):
     # split int divisible
     x = impl.Tensor([[i + j * 4 for i in range(4)] for j in range(6)])  # shape (6,4)
     return impl.split(x, 2, 0)  # split_size=2, dim=0，=> 3 chunks (2,4)
 
 @testcase(name="split2", score=10)
-@use_cpp_tensor
+
 def split2(impl=torch):
     # split int not divisible
     x = impl.Tensor([[i + j * 3 for i in range(3)] for j in range(5)])  # shape (5,3)
     return impl.split(x, 2, 0)  # split_size=2, dim=0，=> 3 chunks [(2,3),(2,3),(1,3)]
 
 @testcase(name="split3", score=10)
-@use_cpp_tensor
+
 def split3(impl=torch):
     # split int dim 1
     x = impl.Tensor([[i + j * 7 for i in range(7)] for j in range(2)])  # shape (2,7)
     return impl.split(x, 3, 1)  # split_size=3, dim=1，=> 3 chunks [(2,3),(2,3),(2,1)]
 
 @testcase(name="split4", score=10)
-@use_cpp_tensor
+
 def split4(impl=torch):
     # split int size larger than dim
     x = impl.Tensor([[1, 2, 3]])
     return impl.split(x, 10, 1)  # split_size=10 > shape[1]，=> 1 chunk [(1,3)]
 
 @testcase(name="split5", score=10)
-@use_cpp_tensor
+
 def split5(impl=torch):
     # split int size is 1
     x = impl.Tensor([0, 1, 2, 3])
     return impl.split(x, 1, 0)  # split_size=1, dim=0，=> 4 chunks [(1,), (1,), (1,), (1,)]
 
 @testcase(name="split6", score=10)
-@use_cpp_tensor
+
 def split6(impl=torch):
     # split sections basic
     x = impl.Tensor([[i + j * 4 for i in range(4)] for j in range(6)])  # shape (6,4)
     return impl.split(x, [2, 3, 1], 0)  # sections=[2,3,1], dim=0
 
 @testcase(name="split7", score=10)
-@use_cpp_tensor
+
 def split7(impl=torch):
     # split sections dim 1
     x = impl.Tensor([[i + j * 7 for i in range(7)] for j in range(2)])  # shape (2,7)
     return impl.split(x, [2, 2, 3], 1)  # sections=[2,2,3], dim=1
 
 @testcase(name="split8", score=10)
-@use_cpp_tensor
+
 def split8(impl=torch):
     # split sections single section
     x = impl.Tensor([1, 2, 3, 4])
     return impl.split(x, [4], 0)  # sections=[4], dim=0
 
 @testcase(name="split9", score=10)
-@use_cpp_tensor
+
 def split9(impl=torch):
     # split sections dim size not match
     x = impl.Tensor([0, 1, 2])
@@ -311,7 +310,7 @@ def split9(impl=torch):
         return True
 
 @testcase(name="stack1", score=10)
-@use_cpp_tensor
+
 def stack1(impl=torch):
     # stack along new dimension dim=0
     a = impl.Tensor([1, 2, 3])
@@ -345,7 +344,7 @@ def stack1(impl=torch):
     return case1, case2, case3, case4, case5, case6
 
 @testcase(name="cat1", score=10)
-@use_cpp_tensor
+
 def cat1(impl=torch):
     # cat along existing dim=0
     a = impl.Tensor([[1, 2]])
@@ -382,7 +381,7 @@ def cat1(impl=torch):
     return case1, case2, case3, case4, case5, case6
 
 @testcase(name="squeeze_unsqueeze_all_cases", score=10)
-@use_cpp_tensor
+
 def squeeze_unsqueeze_all_cases(impl):
     results = []
 
@@ -469,7 +468,7 @@ def squeeze_unsqueeze_all_cases(impl):
     return results
 
 @testcase(name="broadcast_to_all_cases", score=10)
-@use_cpp_tensor
+
 def broadcast_to_all_cases(impl):
     results = []
 
@@ -549,7 +548,7 @@ def broadcast_to_all_cases(impl):
     return results
 
 @testcase(name="broadcast_pair_case1", score=10)
-@use_cpp_tensor
+
 def broadcast_pair_case1(impl):
     a = impl.Tensor([[1], [2]])     # shape=(2,1)
     b = impl.Tensor([[10, 20, 30]]) # shape=(1,3)
@@ -560,7 +559,7 @@ def broadcast_pair_case1(impl):
     return result
 
 @testcase(name="broadcast_pair_case2", score=10)
-@use_cpp_tensor
+
 def broadcast_pair_case2(impl):
     c = impl.Tensor([100, 200, 300])   # shape=(3,)
     d = impl.Tensor([[4, 5, 6]])       # shape=(1,3)
@@ -571,7 +570,7 @@ def broadcast_pair_case2(impl):
     return result
 
 @testcase(name="broadcast_pair_case3", score=10)
-@use_cpp_tensor
+
 def broadcast_pair_case3(impl):
     e = impl.Tensor([[1, 2, 3], [4, 5, 6]])  # (2,3)
     f = impl.Tensor([[7], [8]])              # (2,1)
@@ -582,7 +581,7 @@ def broadcast_pair_case3(impl):
     return result
 
 @testcase(name="broadcast_pair_case4", score=10)
-@use_cpp_tensor
+
 def broadcast_pair_case4(impl):
     e = impl.Tensor([[1, 2, 3], [4, 5, 6]])
     c = impl.Tensor([100, 200, 300])
@@ -593,7 +592,7 @@ def broadcast_pair_case4(impl):
     return result
 
 @testcase(name="broadcast_pair_case5", score=10)
-@use_cpp_tensor
+
 def broadcast_pair_case5(impl):
     e = impl.Tensor([[1, 2, 3], [4, 5, 6]])  # (2,3)
     g = impl.Tensor([[1,2,3,4],[5,6,7,8]])   # (2,4)
@@ -604,7 +603,7 @@ def broadcast_pair_case5(impl):
     return result
 
 @testcase(name="broadcast_pair_case6", score=10)
-@use_cpp_tensor
+
 def broadcast_pair_case6(impl):
     if impl.__name__ == "torch":
         r = impl.tensor(42)

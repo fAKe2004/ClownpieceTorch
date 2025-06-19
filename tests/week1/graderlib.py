@@ -1,12 +1,15 @@
 import sys
 import os
+from functools import wraps
+
 
 self_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(self_path + "/../../")
 sys.path.append(self_path)
 
-import clownpiece as CT
-from clownpiece import TensorBaseImpl as TensorCT
+import tensor_impl as CT
+from tensor_impl import TensorBaseImpl as TensorCT
+CT.Tensor = CT.TensorBaseImpl
 import torch as T
 from torch import Tensor as TensorT
 

@@ -22,7 +22,7 @@ Tensor tensor_reshape_wrapper(const Tensor &self, py::args args, bool copy);
 Tensor tensor_view_wrapper(const Tensor &self, py::args args);
 py::object tensor_to_list(const at::Tensor& tensor);
 
-PYBIND11_MODULE(clownpiece, m) {
+PYBIND11_MODULE(tensor_impl, m) {
     py::class_<at::Tensor, std::shared_ptr<at::Tensor>>(m, "TensorBaseImpl")
         .def(py::init<>())
         .def("__repr__",

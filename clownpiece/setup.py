@@ -3,7 +3,7 @@ import pybind11
 
 ext_modules = [
     Extension(
-        'clownpiece',
+        'tensor_impl',
         sources=[
             "tensor/meta.cc",
             "tensor/tensor.cc",
@@ -19,7 +19,7 @@ ext_modules = [
 ]
 
 setup(
-    name='clownpiece',
+    name='tensor_impl',
     version='0.0.1',
     ext_modules=ext_modules,
 )

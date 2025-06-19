@@ -1,5 +1,5 @@
-import clownpiece as cp
-from clownpiece import TensorBaseImpl
+from . import tensor_impl as cp
+# from cp import TensorBaseImpl
 
 from typing import TYPE_CHECKING, List, Optional, Union
 import copy
@@ -25,6 +25,17 @@ def is_grad_enabled_with_params(*args):
   
   return is_grad_enabled() and any(tensor.requires_grad for tensor in flatten_args if isinstance(tensor, Tensor))
 
+
+def scalar_to_tensorbase(function):
+  def wrapped_function(*args, **kwargs):
+    new_args = []
+    for arg in args:
+      if isinstance(arg, (int, float)):
+        new_args.append(TensorBase(arg, requires_grad=False))
+      else:
+        new_args.append(arg)
+    return function(*new_args, **kwargs)
+  return wrapped_function
 """
   Tensor Base Class
 """
@@ -712,12 +723,10 @@ class Tensor(TensorBase):
       return FunctionClass().apply(self, split, dim)
 
   @tensor_op('stack', 'Stack')
-  # @staticmethod
   def stack(inputs: List["Tensor"], dim: int = 0, FunctionClass=None) -> "Tensor":
       return FunctionClass().apply(*inputs, dim=dim)
 
   @tensor_op('cat', 'Cat')
-  # @staticmethod
   def cat(inputs: List["Tensor"], dim: int = 0, FunctionClass=None) -> "Tensor":
       return FunctionClass().apply(*inputs, dim=dim)
 

@@ -1,4 +1,4 @@
-# clownpiece.pyi
+# tensor_impl.pyi
 from typing import Any, Callable, Iterable, List, Optional, Sequence, Tuple, overload, Union
 
 dtype = Any

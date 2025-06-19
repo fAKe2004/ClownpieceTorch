@@ -3,14 +3,13 @@ import os
 
 
 import torch
-import clownpiece
 from graderlib import self_path
 from graderlib import set_debug_mode, testcase, grader_summary
 
-from utils import use_cpp_tensor
+
 
 @testcase(name="basic_calc1: Binary Operations", score=10)
-@use_cpp_tensor
+
 def basic_calc1(impl = torch):
     a = impl.Tensor([[1, -2, 3], [4, 5, -6]])
     b = impl.Tensor([[7, 8, -9], [10, -11, -12]])
@@ -20,7 +19,7 @@ def basic_calc1(impl = torch):
     return (a + b, a - b, a * b, a / b, impl.dot(c, d))
     
 @testcase(name="basic_calc2: Unary Operations1", score=10)
-@use_cpp_tensor
+
 def basic_calc2(impl = torch):
     a = impl.Tensor([[1, -2, 3], [4, 5, -6]])
     b = impl.Tensor([[7, 8, -9], [10, -11, -12]])
@@ -31,7 +30,7 @@ def basic_calc2(impl = torch):
             a.tanh(), impl.tanh(a))
     
 @testcase(name="basic_calc3: Unary Operations2", score=10)
-@use_cpp_tensor
+
 def basic_calc3(impl = torch):
     base = 2
     a = impl.Tensor([[1, -2, 3], [4, 5, -6]])
@@ -43,7 +42,7 @@ def basic_calc3(impl = torch):
             a.clamp(2, 5), impl.clamp(a, 2, 5))
 
 @testcase(name="basic_calc4: Comparison Operations", score=10)
-@use_cpp_tensor
+
 def basic_calc4(impl = torch):
     a = impl.Tensor([[1, -2, 3], [4, 5, -6]])
     b = impl.Tensor([[7, -2, -9], [10, 6, -12]])
@@ -61,7 +60,7 @@ def basic_calc4(impl = torch):
     
 
 @testcase(name="broadcast1: Scalar Boardcasting", score=10)
-@use_cpp_tensor
+
 def broadcast1(impl = torch):
     a = impl.Tensor([[1, -2, 3], [4, 5, -6]])
     if impl.__name__ == "torch":
@@ -75,7 +74,7 @@ def broadcast1(impl = torch):
             a * b, a / b)
     
 @testcase(name="broadcast2: Vector Boardcasting", score=10)
-@use_cpp_tensor
+
 def broadcast2(impl = torch):
     a = impl.Tensor([[1, -2, 3], [4, 5, -6]])
     b = impl.Tensor([[7, 8, -9], [10, -11, -12]])
@@ -100,7 +99,7 @@ def broadcast2(impl = torch):
             c + d, e + f, g + h, i + j)
 
 @testcase(name="broadcast3: Invailid Vector Boardcasting", score=10)
-@use_cpp_tensor
+
 def broadcast3(impl = torch):
     a = impl.zeros((2, 3))
     b = impl.zeros((3, 3))
