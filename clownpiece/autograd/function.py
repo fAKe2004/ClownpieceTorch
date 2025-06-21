@@ -659,7 +659,7 @@ class Broadcast(Function):
     def forward(ctx: Context, *inputs: Tensor):
         ctx.input_shapes = [input.shape for input in inputs]
         
-        return Tensor.broadcast(inputs)
+        return Tensor.broadcast(*inputs)
     
     @staticmethod
     def backward(ctx: Context, *grad_outputs: Tensor):

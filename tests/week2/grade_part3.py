@@ -190,13 +190,13 @@ def testsets_part3():
   print("Testing Part3 +-*/...")
 #   set_debug_mode(True)
   add1()
-#   add2()
+  add2()
   sub1()
-#   sub2()
+  sub2()
   mul1()
-#   mul2()
+  mul2()
   div1()
-#   div2()
+  div2()
   
 if __name__ == "__main__":
   testsets_part3()

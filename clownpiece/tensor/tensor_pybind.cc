@@ -299,6 +299,10 @@ PYBIND11_MODULE(tensor_impl, m) {
             // 广播两个 tensor
             return at::Tensor().broadcast(lhs, rhs);
         }, py::arg("lhs"), py::arg("rhs"), "Broadcast two tensors to a common shape")
+        .def_static("broadcast", [](const std::vector<at::Tensor> &tensors) {
+            // 广播多个 tensor
+            return at::Tensor().broadcast(tensors);
+        }, py::arg("tensors"), "Broadcast a list of tensors to a common shape")
         // 增加.T属性
         .def_property_readonly("T", [](const at::Tensor &self) {
             // 通常 2D tensor 的 .T 是 swap 0,1 轴；更高维可按需扩展

@@ -112,7 +112,7 @@ class TensorBase:
     # print("Base Broadcast called with inputs:", inputs)
     if not all(isinstance(t, TensorBase) for t in inputs):
       raise TypeError("All inputs must be instances of TensorBase")
-    impls = cp.TensorBaseImpl.broadcast_tensors([t._impl for t in inputs])
+    impls = cp.TensorBaseImpl.broadcast([t._impl for t in inputs])
     return [cls(impl) for impl in impls]
   
 
@@ -262,20 +262,21 @@ class TensorBase:
   def sum(self, dim=None, keepdims=False):
     print("sum called with dim=", dim, "keepdims=", keepdims)
     if isinstance(dim, int):
-      pass
+      summed_impl = self._impl.sum(dim, keepdims)
+      return self.__class__(summed_impl)
     elif isinstance(dim, (list, tuple)):
-      if len(dim) == 1:
-        dim = dim[0]
-      else:
-        raise TypeError(f"Expected int or list/tuple of single int, got {type(dim).__name__}")
+      result = self.clone()
+      dim = list(dim)
+      dim.sort(reverse=True)
+      for d in dim:
+        result = result.sum(d, keepdims=keepdims)
+      return result
     elif dim is None:
-      dim = -1
+      dim = list(range(self.dim()))
+      return self.sum(dim, keepdims=keepdims)
     else :
       raise TypeError(f"Expected int or list/tuple of single int, got {type(dim).__name__}")
       
-    summed_impl = self._impl.sum(dim, keepdims)
-    return self.__class__(summed_impl)
-  
   """
     Part4
   """
@@ -295,7 +296,7 @@ class TensorBase:
   """
     Part5
   """
-  def max(self, dim=-1, keepdims=False):
+  def max(self, dim=None, keepdims=False):
     print("max called with dim=", dim, "keepdims=", keepdims)
     if isinstance(dim, int):
       pass
