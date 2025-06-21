@@ -326,6 +326,12 @@ PYBIND11_MODULE(tensor_impl, m) {
         .def_static("empty_like", [](const at::Tensor &self) {
             return at::empty_like(self);
         }, "Create an empty tensor with the same shape and type as another tensor")
+        .def_static("randn", [](std::vector<int> shape){
+            return at::randn(shape);
+        }, "Create a tensor with random values from a normal distribution")
+        .def_static("randn_like", [](const at::Tensor &self) {
+            return at::randn_like(self);
+        }, "Create a tensor with random values from a normal distribution with the same shape and type as another tensor")
 
         ;
 

@@ -7,5 +7,5 @@ from .autograd import backward
 
 __all__ = ['TensorBaseImpl', 'TensorBase', 'Tensor']
 
-for name in ['ones', 'zeros', 'empty', 'empty_like', 'ones_like', 'zeros_like', 'stack', 'cat', 'broadcast']:
+for name in ['ones', 'zeros', 'empty', 'empty_like', 'ones_like', 'zeros_like', 'randn', 'randn_like', 'stack', 'cat', 'broadcast']:
     globals()[name] = getattr(Tensor, name)
