@@ -50,40 +50,44 @@ class TensorBase:
       self._impl = cp.TensorBaseImpl(array)
     else:
       self._impl = cp.TensorBaseImpl()
+      
+  @classmethod
+  def randn(cls, shape, **kwargs):
+    impl = cp.TensorBaseImpl.randn(shape)
+    return cls(impl, **kwargs)
+
+  @classmethod
+  def randn_like(cls, tensor, **kwargs):
+    impl = cp.TensorBaseImpl.randn_like(tensor._impl)
+    return cls(impl, **kwargs)
 
   @classmethod
   def ones(cls, shape, **kwargs):
-    # print("Base Creating ones with shape:", shape)
     impl = cp.TensorBaseImpl.ones(shape)
     return cls(impl, **kwargs)
   
   @classmethod
   def ones_like(cls, tensor, **kwargs):
-    # print("Base Creating ones_like with tensor:", tensor)
     impl = cp.TensorBaseImpl.ones_like(tensor._impl)
     return cls(impl, **kwargs)
   
   @classmethod
   def zeros(cls, shape, **kwargs):
-    # print("Base Creating zeros with shape:", shape)
     impl = cp.TensorBaseImpl.zeros(shape)
     return cls(impl, **kwargs)
   
   @classmethod
   def zeros_like(cls, tensor, **kwargs):
-    # print("Base Creating zeros_like with tensor:", tensor)
     impl = cp.TensorBaseImpl.zeros_like(tensor._impl)
     return cls(impl, **kwargs)
   
   @classmethod
   def empty(cls, shape, **kwargs):
-    # print("Base Creating empty with shape:", shape)
     impl = cp.TensorBaseImpl.empty(shape)
     return cls(impl, **kwargs)
   
   @classmethod
   def empty_like(cls, tensor, **kwargs):
-    # print("Base Creating empty_like with tensor:", tensor)
     impl = cp.TensorBaseImpl.empty_like(tensor._impl)
     return cls(impl, **kwargs)
   
@@ -121,7 +125,7 @@ class TensorBase:
     return self._impl.shape
       
   def reshape(self, new_shape):
-    # print("Base Reshape called with new shape:", new_shape)
+    print("Base Reshape called with new shape:", new_shape)
     reshaped_impl = self._impl.reshape(new_shape)
     return self.__class__(reshaped_impl)
 
@@ -148,6 +152,9 @@ class TensorBase:
   def __repr__(self):
     # return reqiures_grad = getattr(self, 'requires_grad', None)
     return f"{self._impl}"
+
+  def tolist(self):
+    return self._impl.tolist()
   
 
   """
@@ -260,7 +267,7 @@ class TensorBase:
     Part3
   """
   def sum(self, dim=None, keepdims=False):
-    print("sum called with dim=", dim, "keepdims=", keepdims)
+    # print("sum called with dim=", dim, "keepdims=", keepdims)
     if isinstance(dim, int):
       pass
     elif isinstance(dim, (list, tuple)):
@@ -386,49 +393,6 @@ class TensorBase:
   #   self[:] = other
   
   
-#   def max(self, dim=-1, keepdims=False):
-#     return TensorBase(super(TensorBase, self).max(axis=dim, keepdims=keepdims)), TensorBase(np.argmax(self, axis=dim, keepdims=keepdims))
-#   def softmax(self, dim=-1):
-#     exp_tensor = np.exp(self)
-#     sum_tensor = exp_tensor.sum(dim=dim, keepdims=True)
-#     result = TensorBase(exp_tensor / sum_tensor)
-#     return result
-  
-#   def permute(self, perm: List[int]):
-#     return TensorBase(np.transpose(self, axes=perm))
-#   def reshape(self, shape: List[int]):
-#     return TensorBase(np.reshape(self, shape))
-#   def view(self, shape: List[int]):
-#     return TensorBase(np.reshape(self, shape))
-#   def narrow(self, dim: int, start: int, length: int):
-#     slices = [slice(None)] * self.dim()
-#     slices[dim] = slice(start, start + length)
-#     return TensorBase(self[tuple(slices)])
-#   def chunk(self, chunks: int, dim: int = 0):
-#     split_sections = [(self.shape[dim] + chunks - 1) // chunks] * chunks
-#     split_indices = [sum(split_sections[:i]) for i in range(1, len(split_sections))] # omit last one
-#     splitted = np.array_split(self, split_indices, axis=dim)
-#     return [TensorBase(t) for t in splitted]
-  
-#   def split(self, split: Union[int, List[int]], dim: int = 0):
-#     if isinstance(split, list):
-#       split = [sum(split[:i]) for i in range(1, len(split))] # omit last one
-#     return [TensorBase(t) for t in np.array_split(self, split, axis=dim)]
-  
-#   @staticmethod
-#   def cat(inputs: List["TensorBase"], dim: int = 0):
-#     return TensorBase(np.concatenate([np.asarray(t) for t in inputs], axis=dim))
-#   @staticmethod
-#   def stack(inputs: List["TensorBase"], dim: int = 0):
-#     return TensorBase(np.stack([np.asarray(t) for t in inputs], axis=dim))
-#   def broadcast_to(self, shape):
-#     return TensorBase(np.broadcast_to(self, shape))
-#   @staticmethod
-#   def broadcast(inputs: List["TensorBase"]):
-#     outputs = np.broadcast_arrays(*inputs)
-#     outputs = [TensorBase(o) for o in outputs]
-#     return outputs
-  
 
 """
   Utils for Binding
@@ -460,7 +424,7 @@ def tensor_op(op_name, Function_name):
       if not is_grad_enabled_with_params(*args):
         # print("Grad not enabled, calling TensorBase method directly")
         op = getattr(TensorBase, op_name)
-        # print(f"Calling TensorBase.{op_name} with args, kwargs={kwargs}")
+        # print(f"Calling TensorBase.{op_name} with args={args}, kwargs={kwargs}")
         raw_results = op(*args, **kwargs)
         
         def TensorBase2Tensor(x):
@@ -537,6 +501,8 @@ class Tensor(TensorBase):
   def __eq__(self,other): return super().__eq__(other)
   def __ne__(self,other): return super().__ne__(other)
   
+  def tolist(self):
+    return super().tolist()
 
       
   """
@@ -773,14 +739,20 @@ def empty(shape, requires_grad: bool = False) -> Tensor:
 def empty_like(tensor: Tensor, requires_grad: bool = False) -> Tensor:
   return Tensor.empty(tensor.shape, requires_grad=requires_grad)
 
-def zeros(shape, dtype=None, requires_grad=None):
+def zeros(shape, requires_grad=None):
   return Tensor.zeros(shape, requires_grad=requires_grad)
 
-def zeros_like(tensor, dtype=None, requires_grad=None):
+def zeros_like(tensor, requires_grad=None):
   return Tensor.zeros(tensor.shape, requires_grad=requires_grad)
 
-def ones(shape, dtype=None, requires_grad=None):
+def ones(shape, requires_grad=None):
   return Tensor.ones(shape, requires_grad=requires_grad)
 
-def ones_like(tensor, dtype=None, requires_grad=None):
+def ones_like(tensor, requires_grad=None):
   return Tensor.ones(tensor.shape, requires_grad=requires_grad)
+
+def randn(shape, requires_grad=None):
+  return Tensor.randn(shape, requires_grad=requires_grad)
+
+def randn_like(tensor, requires_grad=None):
+  return Tensor.randn(tensor.shape, requires_grad=requires_grad)

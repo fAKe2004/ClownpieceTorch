@@ -188,14 +188,14 @@ def div2(impl = torch):
 def testsets_part3():
   print_separate_line()  
   print("Testing Part3 +-*/...")
-#   set_debug_mode(True)
-  add1()
-#   add2()
-  sub1()
+  set_debug_mode(True)
+#   add1()
+  add2()
+#   sub1()
 #   sub2()
-  mul1()
+#   mul1()
 #   mul2()
-  div1()
+#   div1()
 #   div2()
   
 if __name__ == "__main__":

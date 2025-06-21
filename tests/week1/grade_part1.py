@@ -6,7 +6,6 @@ import torch
 from graderlib import self_path
 from graderlib import set_debug_mode, testcase, grader_summary
 
-# 
 
 @testcase(name="init1: from list 1D", score=10)
 
