@@ -32,7 +32,11 @@ def sum_op(impl=torch):
     
     c = a.sum(dim=0, keepdims=False)
     c.backward(impl.ones_like(c))
-    return a.grad, b, c
+    
+    d = a.sum(dim=None, keepdims=False)
+    d.backward(impl.ones_like(d))
+    
+    return a.grad, b, c, d
 
 @testcase(name="softmax_op", score=10)
 def softmax_op(impl=torch):

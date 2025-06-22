@@ -20,17 +20,17 @@ def sum2(impl=torch):
     a = impl.Tensor([[1, 2, 3], [4, 5, 6]])
     return a.sum(dim = 1)
 
-@testcase(name="sum3: sum with keepdim", score=10)
+@testcase(name="sum3: sum with keepdims", score=10)
 
 def sum3(impl=torch):
     a = impl.Tensor([[1, 2, 3], [4, 5, 6]])
-    return a.sum(dim = 1, keepdim = True)
+    return a.sum(dim = 1, keepdims = True)
 
 @testcase(name="sum4: sum for higher dimension", score=10)
 
 def sum4(impl=torch):
     a = impl.Tensor([[[1, 2], [3, 4]], [[5, 6], [7, 8]]])
-    return a.sum(dim = 1, keepdim = True)
+    return a.sum(dim = 1, keepdims = True)
 
 @testcase(name="max1: max along dim=0", score=10)
 
@@ -46,11 +46,11 @@ def max2(impl=torch):
     vals, idxs = a.max(dim = 1)
     return (vals, idxs)
 
-@testcase(name="max3: max with keepdim", score=10)
+@testcase(name="max3: max with keepdims", score=10)
 
 def max3(impl=torch):
     a = impl.Tensor([[1, 5, 2], [4, 3, 6]])
-    vals, idxs = a.max(dim = 1, keepdim = True)
+    vals, idxs = a.max(dim = 1, keepdims = True)
     return (vals, idxs)
 
 @testcase(name="max4: max for higher dimension", score=10)

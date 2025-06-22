@@ -209,9 +209,9 @@ class Tensor {
 
   Tensor sqrt() const;
 
-  Tensor sum(int dim, bool keepdim=false) const;
+  Tensor sum(int dim, bool keepdims=false) const;
 
-  std::pair<Tensor, Tensor> max(int dim, bool keepdim=false) const;
+  std::pair<Tensor, Tensor> max(int dim, bool keepdims=false) const;
 
   Tensor softmax(int dim) const;
 
@@ -283,9 +283,9 @@ Tensor pow(const Tensor& tensor, dtype exponent);
 
 Tensor sqrt(const Tensor& tensor);
 
-Tensor sum(const Tensor& tensor, int dim, bool keepdim=false);
+Tensor sum(const Tensor& tensor, int dim, bool keepdims=false);
 
-std::pair<Tensor, Tensor> max(const Tensor& tensor, int dim, bool keepdim=false);
+std::pair<Tensor, Tensor> max(const Tensor& tensor, int dim, bool keepdims=false);
 
 Tensor softmax(const Tensor& tensor, int dim);
 

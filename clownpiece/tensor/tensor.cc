@@ -741,8 +741,8 @@ namespace at {
     return tensor.sqrt();
   }
 
-  Tensor Tensor::sum(int dim, bool keepdim) const {
-    std::function<dtype(const vec<dtype>&)> sum_op = [keepdim](const vec<dtype>& vec) -> dtype {
+  Tensor Tensor::sum(int dim, bool keepdims) const {
+    std::function<dtype(const vec<dtype>&)> sum_op = [keepdims](const vec<dtype>& vec) -> dtype {
       dtype sum = 0;
       for (const auto& v : vec)
         sum += v;
@@ -750,17 +750,17 @@ namespace at {
     };
 
     Tensor output = apply_along_axis(*this, dim, sum_op);
-    if (!keepdim)
+    if (!keepdims)
       output = output.squeeze(dim);
     return output;
   }
 
-  Tensor sum(const Tensor& tensor, int dim, bool keepdim) {
-    return tensor.sum(dim, keepdim);
+  Tensor sum(const Tensor& tensor, int dim, bool keepdims) {
+    return tensor.sum(dim, keepdims);
   }
 
-  std::pair<Tensor, Tensor> Tensor::max(int dim, bool keepdim) const {
-    std::function<std::pair<dtype, dtype>(const vec<dtype>&)> max_op = [keepdim](const vec<dtype>& vec) -> std::pair<dtype, dtype> {
+  std::pair<Tensor, Tensor> Tensor::max(int dim, bool keepdims) const {
+    std::function<std::pair<dtype, dtype>(const vec<dtype>&)> max_op = [keepdims](const vec<dtype>& vec) -> std::pair<dtype, dtype> {
       if (vec.empty())
         throw std::runtime_error("Tensor: max on empty vector");
       dtype max_val = vec[0];
@@ -777,15 +777,15 @@ namespace at {
 
     Tensor output_1, output_2;
     std::tie(output_1, output_2) = apply_along_axis(*this, dim, max_op);
-    if (!keepdim) {
+    if (!keepdims) {
       output_1 = output_1.squeeze(dim);
       output_2 = output_2.squeeze(dim);
     }
     return std::make_pair(output_1, output_2);
   }
 
-  std::pair<Tensor, Tensor> max(const Tensor& tensor, int dim, bool keepdim) {
-    return tensor.max(dim, keepdim);
+  std::pair<Tensor, Tensor> max(const Tensor& tensor, int dim, bool keepdims) {
+    return tensor.max(dim, keepdims);
   }
 
   Tensor Tensor::softmax(int dim) const {

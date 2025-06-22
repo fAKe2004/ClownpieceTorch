@@ -204,7 +204,6 @@ class TensorBase:
     sqrt_impl = self._impl.sqrt()
     return self.__class__(sqrt_impl)
 
-
   def __add__(self, other):
     if isinstance(other, TensorBase): return self.__class__(self._impl.__add__(other._impl))
     elif isinstance(other, (int, float)): return self.__class__(self._impl.__add__(other))
@@ -466,22 +465,6 @@ class Tensor(TensorBase):
 
   def copy_(self, other):
     return super().copy_(other)
-
-#   def __array_finalize__(self, obj):
-#     # if obj is None:
-#     #   return
-#     self.requires_grad = getattr(obj, 'requires_grad', False)
-#     self.grad_fn = getattr(obj, 'grad_fn', None)
-#     self.grad = getattr(obj, 'grad', None)
-#     self.output_nr = getattr(obj, 'output_nr', 0)
-
-#     # Ensure attributes are initialized if not present on obj
-#     if not hasattr(self, 'grad_fn'):
-#         self.grad_fn = None
-#     if not hasattr(self, 'grad'):
-#         self.grad = None
-#     if not hasattr(self, 'output_nr'):
-#         self.output_nr = 0
         
   """
     Other
@@ -645,11 +628,11 @@ class Tensor(TensorBase):
     return FunctionClass().apply(self, dim, keepdims)
   
   @tensor_op('max', 'Max')
-  def max(self, dim=None, keepdims=False, FunctionClass=None)->"Tensor":
+  def max(self, dim=-1, keepdims=False, FunctionClass=None)->"Tensor":
     return FunctionClass().apply(self, dim, keepdims)
   
   @tensor_op('softmax', 'Softmax')
-  def softmax(self, dim=None, FunctionClass=None)->"Tensor":
+  def softmax(self, dim=-1, FunctionClass=None)->"Tensor":
     return FunctionClass().apply(self, dim)
   
   """

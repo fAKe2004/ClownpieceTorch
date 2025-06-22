@@ -266,8 +266,8 @@ PYBIND11_MODULE(tensor_impl, m) {
 
 
         /*** Part VI: Reduction and Normalization Operations ***/
-        .def("sum", &at::Tensor::sum, py::arg("dim"), py::arg("keepdim") = false, "Sum over a dimension")
-        .def("max", &at::Tensor::max, py::arg("dim"), py::arg("keepdim") = false, "Get the maximum value and its index over a dimension")
+        .def("sum", &at::Tensor::sum, py::arg("dim"), py::arg("keepdims") = false, "Sum over a dimension")
+        .def("max", &at::Tensor::max, py::arg("dim"), py::arg("keepdims") = false, "Get the maximum value and its index over a dimension")
         .def("softmax", &at::Tensor::softmax, py::arg("dim"), "Compute the softmax over a dimension")
 
 
@@ -434,8 +434,8 @@ PYBIND11_MODULE(tensor_impl, m) {
     m.def("dot", [](const at::Tensor &a, const at::Tensor &b) {
         return a ^ b;
     }, py::arg("a"), py::arg("b"), "Dot product of two tensors");
-    m.def("sum", &at::Tensor::sum, py::arg("t"), py::arg("dim"), py::arg("keepdim") = false, "Sum over a dimension");
-    m.def("max", &at::Tensor::max, py::arg("t"), py::arg("dim"), py::arg("keepdim") = false, "Get the maximum value and its index over a dimension");
+    m.def("sum", &at::Tensor::sum, py::arg("t"), py::arg("dim"), py::arg("keepdims") = false, "Sum over a dimension");
+    m.def("max", &at::Tensor::max, py::arg("t"), py::arg("dim"), py::arg("keepdims") = false, "Get the maximum value and its index over a dimension");
     m.def("softmax", &at::Tensor::softmax, py::arg("t"), py::arg("dim"), "Compute the softmax over a dimension");
 
     /*** Part VII: Shape Manipulation ***/

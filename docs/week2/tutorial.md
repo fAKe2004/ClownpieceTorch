@@ -775,6 +775,8 @@ Following the `Tensor.clone` example, please complete:
 
 From data's perspective, `clone` and `contiguous` are essentially identical mapping, so their backward is also identical mapping.
 
+You should NOT copy grad_fn field in clone or contiguous. This will break the integrity of computation graph. Remeber, all operations on tensors are internally tracked by the computation graph.
+
 > `def Tensor.__getitem__(self, index_or_slice) -> "Tensor"` & `class Subscriptor(Function)`
 
 Subscriptor returns a view of the tensor (or sub-tensor). The backward need to:
@@ -956,11 +958,11 @@ Note that matmul with scalar is prohibited. (so whether to reload `__rmatmul__` 
 
 Pleaes complete:
 
-> `Tensor.sum(self, dim=-1, keepdim=False)` & `class Sum(Function)`
+> `Tensor.sum(self, dim=None, keepdims=False)` & `class Sum(Function)`
 
 Broadcast at backward to expand the reduced dimention.
 
-> `Tensor.max(self, dim=-1, keepdim=False)` & `class Max(Function)`
+> `Tensor.max(self, dim=-1, keepdims=False)` & `class Max(Function)`
 
 Max is a differentiable operation (with weak assumption that when elements are equal, we deterministically choose first one). 
 

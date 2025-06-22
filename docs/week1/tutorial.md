@@ -494,6 +494,8 @@ Return if the tensor is contiguous in memory. [link](https://docs.pytorch.org/do
   
 Return a new contiguous tensor with underyling data copied. [link](https://docs.pytorch.org/docs/stable/generated/torch.clone.html#torch.clone)
 
+In newer version of PyTorch, clone does not necessarily return a contiguous tensor, but in our implement, please make it contigous.
+
 ---
 > **Tensor contiguous() const**:
 
@@ -739,31 +741,33 @@ The rule for matmul is a bit complicated, please refer to [pytorch's document](h
 ## Part VI: Reduction and Normalization Operations
 
 ```cpp
-  Tensor sum(int dim, bool keepdim=false) const;
+  Tensor sum(int dim, bool keepdims=false) const;
 
-  std::pair<Tensor, Tensor> max(int dim, bool keepdim=false) const; // Returns (values, indices)
+  std::pair<Tensor, Tensor> max(int dim, bool keepdims=false) const; // Returns (values, indices)
   
   Tensor softmax(int dim) const;
 ```
 
 ---
-> **Tensor sum(int dim, bool keepdim=false) const**
+> **Tensor sum(int dim, bool keepdims=false) const**
 
 Returns the sum along dimension `dim`. [link (2nd variant)](https://pytorch.org/docs/stable/generated/torch.sum.html)
 1.  `dim`: The dimension to reduce. Negative indexing is supported.
-2.  `keepdim`: If `true`, the output tensor is of the same dimensionality as `self`, with dimension `dim` having size 1. If `false` (default), the dimension `dim` is squeezed.
+2.  `keepdims`: If `true`, the output tensor is of the same dimensionality as `self`, with dimension `dim` having size 1. If `false` (default), the dimension `dim` is squeezed.
 
 Example:
 ```python
 >> A = Tensor([[0, 0], [1, 1]])
->> A.sum(0, keepdim=True)
+>> A.sum(0, keepdims=True)
 Tensor([[0], [2]])
->> A.sum(1, keepdim=False)
+>> A.sum(1, keepdims=False)
 Tensor([1, 1])
 ```
 
+> Remark: you only need to implement single dimension version `sum`, and we bind multi-dimension version in python for you. Besides, the default `dim` argument is `None` in python that sums over all dimension and produces a singleton tensor.
+
 ---
-> **std::pair<Tensor, Tensor> max(int dim, bool keepdim=false) const; // Returns (values, indices)**
+> **std::pair<Tensor, Tensor> max(int dim, bool keepdims=false) const; // Returns (values, indices)**
 
 Returns a pair of tensors: the maximum values and the indices of these maximum values along the dimension `dim`. [link argmax](https://docs.pytorch.org/docs/stable/generated/torch.argmax.html#torch.argmax), [link max](https://docs.pytorch.org/docs/stable/generated/torch.max.html#torch.max)
 
@@ -781,7 +785,7 @@ $$
 As for tensor:
 
 $$
-  \operatorname{softmax}(A) = \dfrac{A.\text{exp}()}{A.\text{exp}().\text{sum}(\text{dim}, \text{keepdim}=true)}
+  \operatorname{softmax}(A) = \dfrac{A.\text{exp}()}{A.\text{exp}().\text{sum}(\text{dim}, \text{keepdims}=true)}
 $$
 
 ---

@@ -430,9 +430,15 @@ class MatMul(Function):
 """
 
 def reduce_forward_wrapper(forward_impl):
-    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool = False):
+    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int]], keepdims: bool = False):
         ctx.input_shape = input.shape
-        ctx.dim = dim
+        if dim is None:
+            ctx.dim = list(range(input.dim()))
+        elif isinstance(dim, int):
+            ctx.dim = [dim]
+        else:
+            ctx.dim = list(dim)
+        ctx.dim.sort(reverse=True)
         ctx.keepdims = keepdims
         
         output = forward_impl(ctx, input, dim, keepdims)
@@ -444,13 +450,14 @@ def reduce_forward_wrapper(forward_impl):
 class Sum(Function):
     @staticmethod
     @reduce_forward_wrapper
-    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool = False):
+    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int], None], keepdims: bool = False):
         return input.sum(dim, keepdims=keepdims)
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
         if not ctx.keepdims:
-            grad_output = grad_output.unsqueeze(ctx.dim)
+            for dim in ctx.dim:
+                grad_output = grad_output.unsqueeze(dim)
             
         grad_input = grad_output.broadcast_to(ctx.input_shape)
         
@@ -467,12 +474,13 @@ class Max(Function):
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor, grad_indices: Tensor = None):
         max_indices = ctx.get_saved_tensors()[0]
+        dim = ctx.dim[0]
         if ctx.keepdims:
-            max_indices = max_indices.squeeze(ctx.dim)
-            grad_output = grad_output.squeeze(ctx.dim)
+            max_indices = max_indices.squeeze(dim)
+            grad_output = grad_output.squeeze(dim)
             
         grad_input = zeros(ctx.input_shape)
-        grad_input.scatter_(dim=ctx.dim, index=max_indices, src=grad_output)
+        grad_input.scatter_(dim=dim, index=max_indices, src=grad_output)
         
         return grad_input, None, None
     
