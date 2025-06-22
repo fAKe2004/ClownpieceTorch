@@ -332,7 +332,9 @@ PYBIND11_MODULE(tensor_impl, m) {
         .def_static("randn_like", [](const at::Tensor &self) {
             return at::randn_like(self);
         }, "Create a tensor with random values from a normal distribution with the same shape and type as another tensor")
-
+        .def("pad", &at::Tensor::pad, py::arg("dim"), py::arg("pad_left"), py::arg("pad_right"), py::arg("value") = 0.0, "Pads tensor.")
+        .def("unfold", &at::Tensor::unfold, py::arg("output_shape"), py::arg("kernel_size"), py::arg("stride") = std::pair<int, int>{1, 1}, "Extracts sliding local blocks from a batched input tensor.")
+        .def("fold", &at::Tensor::fold, py::arg("output_shape"), py::arg("kernel_size"), py::arg("stride") = std::pair<int, int>{1, 1}, "Combines an array of sliding local blocks into a large containing tensor.")
         ;
 
     /*** Part II: utils, clone, make contiguous and copy_ ***/
@@ -470,6 +472,7 @@ PYBIND11_MODULE(tensor_impl, m) {
     m.def("broadcast_tensors", [](const std::vector<at::Tensor> &tensors) {
         return at::Tensor().broadcast(tensors);
     }, py::arg("tensors"), "Broadcast a list of tensors to a common shape");
+    
 
     /*** Part VIII: Other Helper Constuctors: ***/
     m.def("to_singleton_tensor", [](const at::dtype &value, int dim) {

@@ -239,6 +239,11 @@ Let $\text{shape}_A = (2, 2)$, $\text{shape}_B = (3, 2)$, then $A, B$ are not br
 
 Let $A=(1, 2), B=\begin{pmatrix}3 & 4 \\ 5 & 6\end{pmatrix}$. For $A+B$, we broadcast $A$ to $\begin{pmatrix}1 & 2 \\ 1 & 2\end{pmatrix}$, then $A+B=\begin{pmatrix}4 & 6 \\ 6 & 8\end{pmatrix}$
 
+---
+## 📘 Additional Tutorials  
+* [**Intorduction To Tensor (PyTorch doc)**](https://docs.pytorch.org/tutorials/beginner/introyt/tensors_deeper_tutorial.html):  A beginner guide that thoroughly explores the usage of torch.Tensor class. Have a look if you are unfamiliar with tensor in PyTorch.
+
+* [**PyTorch internals (Blog by ezyang)**](https://blog.ezyang.com/2019/05/pytorch-internals): A detailed deep‑dive and conceptual tour of PyTorch’s core tensor abstraction—including metadata like layout, device, dtype, and stride—and how these underpin view creation, slicing, and the broader C++ kernel and autograd layers .
 
 ---
 
@@ -390,7 +395,13 @@ run the following command to recompile your code
 then, go to directory `tests/week1` to run test scripts or directly run 
 > python ../tests/week1/grade_part{i}.py
 
-There is one test script `grade_part{i}.py` for each part of code below, and a comprehensive test script: `grade_comprehensive.ipynb`, as a lifesaver, you can run `grade_all.py` to test all `grade_part{i}.py` at once!
+There is one test script `grade_part{i}.py` for each part of code below, As a lifesaver, you can run `grade_all.py` to test all `grade_part{i}.py` at once!
+
+There is another comprehensive test script: `grade_comprehensive.ipynb`.
+
+You must pass both `grade_all.py` and `grade_comprehensive.ipynb`.
+
+To see full traceback in debug mode, use `DEBUG=1 python grade_part{i}.py`.
 
 **Important Remark: For all invalid cases and exceptions (out_of_range, invalid_argument, etc.), your code must throw instance of `std::runtime_error` to be properly graded with test scripts**
 
@@ -1124,8 +1135,8 @@ We acknowledge that the workload for the first week is heavier than average. You
 
 First, make sure that you passed the `grade_all.py` as well as `grade_comprehensive.ipynb`.
 
-Then, you should write a detailed **report** under `docs/week1`, to describe the challenges you have encountered, how did you solve them, and what are the takeaways. (Also, attach the output of `grade_all.py` and the entire `grade_comprehensive.ipynb` with output.) This report accounts for part of your score.
+Then, you should write a detailed **report** under `docs/week1`, to describe the challenges you have encountered, how did you solve them, and what are the takeaways. (Also, attach the grader summary part from output of `grade_all.py`). This report accounts for part of your score.
 
 Finally zip the entire project folder into lab-week1.zip, and submit to canvas.
 
-Make sure that the TAs can run the `grade_all.py` and `grade_comprehensive.ipynb` and find your report from your submission.
+Make sure that the TAs can run the `grade_all.py` and `grade_comprehensive.ipynb` (or just leave the running results of ipynb as it is) and find your report from your submission.

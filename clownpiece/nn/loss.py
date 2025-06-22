@@ -1,1 +1,1 @@
-# MSE, CrossEntropy
+# MSE, CrossEntropy, etc.

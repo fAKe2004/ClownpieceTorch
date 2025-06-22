@@ -198,8 +198,6 @@ clownpiece
 |...
 ```
 
-Here’s a clean and clear version of your passage:
-
 ---
 
 * **`tensor.py`**:
@@ -214,6 +212,13 @@ Here’s a clean and clear version of your passage:
   This file manages the `no_grad` context that disable gradient tracing within the context. (Here, [context](https://www.geeksforgeeks.org/python/context-manager-in-python/) is a python concept, not the autograd concept!)
 ---
 
+## How to test your code?
+
+Similar to week1, go to `tests/week2/`, run `grade_part{i}.py` or `grade_all.py`
+
+To see full traceback in debug mode, use `DEBUG=1 python grade_part{i}.py`.
+
+---
 ### ! Important Note: Various Implements Possible
 
 Clearly, there are many design decisions that vary slightly to implement autograd engine.
@@ -312,13 +317,13 @@ class Tensor(TensorBase):
   # this tensor is the i-th output of grad_fn's forward. In the backward graph, it becomes input_nr of the edge.  
   output_nr: int
 
-  def __init__(data: TensorBase, requires_grad: bool = None) -> "Tensor":
+  def __init__(self, data: TensorBase, requires_grad: bool = None) -> "Tensor":
     super().__init__(data)
     self.requires_grad_(requires_grad)
 
   # set requires_grad based on is_grad_enabled.
   # ! you must implement this method: grader lib uses this function
-  def requires_grad_(requires_grad: bool = None):
+  def requires_grad_(self, requires_grad: bool = None):
     if requires_grad is None:
       requires_grad = is_grad_enabled()
     
@@ -1019,6 +1024,8 @@ For example:
   - The data within the index range are mapped bijectively to the output; their relative positions are preserved.
   - The data outside the range are mapped into the void—they no longer influence downstream computation-and thus receive zero gradient during backward.
 
+>> Be careful to handle inputs or outpus in list format! You may need to use `*args` and `return *tensors` to avoid breaking autograd engine's `input_nr` logic.
+
 Please complete:
 
 > `Tensor.permute(self, perm)` & `class Permute(Function)`
@@ -1053,8 +1060,11 @@ Please complete:
 
 First, make sure that you passed the `grade_all.py`.
 
-Then, you should write a detailed **report** under `docs/week2`, to describe the challenges you have encountered, how did you solved them, and what are the takeaways. (Also, attach the output of `grade_all.py`.) This report accounts for part of your score.
+Then, you should write a detailed **report** under `docs/week2`, to describe the challenges you have encountered, how did you solved them, and what are the takeaways. (Also, attach the grader summary part from output of `grade_all.py`). This report accounts for part of your score.
 
-Finally zip the entire project folder into lab-week1.zip, and submit to canvas.
+There is no optional challenge for week2, but if you complete week1'
+s OC, you may include it in this week's report.
+
+Finally zip the entire project folder into lab-week2.zip, and submit to canvas.
 
 Make sure that the TAs can run the `grade_all.py` and find your report from your submission.

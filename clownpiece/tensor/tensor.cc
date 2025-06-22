@@ -1163,5 +1163,161 @@ namespace at {
     
     return output;
   }
+
+
+
+
+
+  /*
+    PAD
+    FOLD
+    UNFOLD
+  */
   
+// ...existing code...
+  /*
+    PAD
+    FOLD
+    UNFOLD
+  */
+  Tensor Tensor::pad(int dim, int pad_left, int pad_right, dtype value) const {
+    dim = normalize_index(dim, dim_);
+    if (pad_left < 0 || pad_right < 0) {
+        throw std::runtime_error("pad: padding must be non-negative");
+    }
+
+    shape_t new_shape = shape_;
+    new_shape[dim] += pad_left + pad_right;
+
+    Tensor output = Tensor(new_shape, value);
+
+    vec<slice_t> slices(dim_);
+    for(int i=0; i<dim_; ++i) {
+        if (i == dim) {
+            slices[i] = {pad_left, pad_left + shape_[i]};
+        } else {
+            slices[i] = {0, shape_[i]};
+        }
+    }
+
+    output[slices].copy_(*this);
+
+    return output;
+  }
+
+  Tensor Tensor::unfold(std::pair<int, int> output_shape, std::pair<int, int> kernel_size, std::pair<int, int> stride) const {
+    if (dim_ != 4) {
+        throw std::runtime_error("unfold: input must be 4D tensor");
+    }
+    Tensor input = this->contiguous();
+
+    int N = input.size(0);
+    int C = input.size(1);
+    int H = input.size(2);
+    int W = input.size(3);
+
+    int kH = kernel_size.first;
+    int kW = kernel_size.second;
+    int sH = stride.first;
+    int sW = stride.second;
+
+    int H_out = (H - kH) / sH + 1;
+    int W_out = (W - kW) / sW + 1;
+
+    if (H_out != output_shape.first || W_out != output_shape.second) {
+        throw std::runtime_error("unfold: output_shape mismatch");
+    }
+
+    int L = H_out * W_out;
+    int block_size = C * kH * kW;
+
+    Tensor output = Tensor({N, block_size, L});
+
+    for (int n = 0; n < N; ++n) {
+        for (int c = 0; c < C; ++c) {
+            for (int h_out = 0; h_out < H_out; ++h_out) {
+                for (int w_out = 0; w_out < W_out; ++w_out) {
+                    int h_start = h_out * sH;
+                    int w_start = w_out * sW;
+                    for (int kh = 0; kh < kH; ++kh) {
+                        for (int kw = 0; kw < kW; ++kw) {
+                            int h_in = h_start + kh;
+                            int w_in = w_start + kw;
+                            
+                            dtype val = input.data_at(n * C * H * W + c * H * W + h_in * W + w_in);
+                            
+                            int l = h_out * W_out + w_out;
+                            int block_idx = c * kH * kW + kh * kW + kw;
+                            
+                            output.data_at(n * block_size * L + block_idx * L + l) = val;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return output;
+  }
+
+  Tensor Tensor::fold(std::pair<int, int> output_shape, std::pair<int, int> kernel_size, std::pair<int, int> stride) const {
+    if (dim_ != 3) {
+        throw std::runtime_error("fold: input must be 3D tensor");
+    }
+    Tensor input = this->contiguous();
+
+    int N = input.size(0);
+    int block_size = input.size(1);
+    int L = input.size(2);
+
+    int kH = kernel_size.first;
+    int kW = kernel_size.second;
+    if (block_size % (kH * kW) != 0) {
+        throw std::runtime_error("fold: block_size not divisible by kernel_size product");
+    }
+    int C = block_size / (kH * kW);
+
+    int H = output_shape.first;
+    int W = output_shape.second;
+
+    int sH = stride.first;
+    int sW = stride.second;
+
+    int H_out = (H - kH) / sH + 1;
+    int W_out = (W - kW) / sW + 1;
+
+    if (L != H_out * W_out) {
+        throw std::runtime_error("fold: L mismatch");
+    }
+
+    Tensor output = zeros({N, C, H, W});
+    Tensor counts = zeros({N, C, H, W});
+
+    for (int n = 0; n < N; ++n) {
+        for (int c = 0; c < C; ++c) {
+            for (int h_out = 0; h_out < H_out; ++h_out) {
+                for (int w_out = 0; w_out < W_out; ++w_out) {
+                    int h_start = h_out * sH;
+                    int w_start = w_out * sW;
+                    for (int kh = 0; kh < kH; ++kh) {
+                        for (int kw = 0; kw < kW; ++kw) {
+                            int h_in = h_start + kh;
+                            int w_in = w_start + kw;
+                            
+                            int l = h_out * W_out + w_out;
+                            int block_idx = c * kH * kW + kh * kW + kw;
+                            
+                            dtype val = input.data_at(n * block_size * L + block_idx * L + l);
+                            
+                            output.data_at(n * C * H * W + c * H * W + h_in * W + w_in) += val;
+                            counts.data_at(n * C * H * W + c * H * W + h_in * W + w_in) += 1.0;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    counts = counts.clamp(1.0, std::numeric_limits<dtype>::max());
+    return output / counts;
+  }
 };

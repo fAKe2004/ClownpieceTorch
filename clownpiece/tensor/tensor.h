@@ -173,7 +173,7 @@ class Tensor {
 
   friend Tensor operator/(const Tensor& lhs, const Tensor& rhs);
 
-  // Comparison
+  // Compairson
   friend Tensor operator==(const Tensor& lhs, const Tensor& rhs);
   friend Tensor operator!=(const Tensor& lhs, const Tensor& rhs);
   friend Tensor operator<(const Tensor& lhs, const Tensor& rhs);
@@ -257,6 +257,17 @@ class Tensor {
   static std::pair<Tensor, Tensor> broadcast(const Tensor& lhs, const Tensor& rhs);
   static vec<Tensor> broadcast(const vec<Tensor>& tensors);
 
+  /*
+  PAD
+  FOLD
+  UNFOLD
+  */
+
+  Tensor pad(int dim, int pad_left, int pad_right, dtype value=0) const;
+
+  Tensor fold(std::pair<int, int> output_shape, std::pair<int, int> kernel_size, std::pair<int, int> stride = {1, 1}) const;
+
+  Tensor unfold(std::pair<int, int> output_shape, std::pair<int, int> kernel_size, std::pair<int, int> stride = {1, 1}) const;
 
 };
 
@@ -317,6 +328,8 @@ Tensor linspace(dtype start, dtype end, int num_steps);
 */
 
 Tensor matmul(const Tensor& lhs, const Tensor& rhs);
+
+
 
 };
 #endif

@@ -110,13 +110,12 @@ class AccumulateGrad(Function):
         return ()    
 
 """
-    clone contiguous
+    Clone Contiguous
 """
 
 class Clone(Function):
     @staticmethod
     def forward(ctx: Context, input: Tensor):
-        print("CLONE:", input.shape)
         return input.clone()
     
     @staticmethod
@@ -133,7 +132,7 @@ class Contiguous(Function):
         return grad_output
     
 """
-    subscriptor
+    Subscriptor
 """
 
 class Subscriptor(Function):
@@ -325,8 +324,6 @@ class Clamp(Function):
         min_val = ctx.min_val
         max_val = ctx.max_val
         mask = (input_tensor > min_val) * (input_tensor < max_val)
-        print("CLAMP MASK:", mask)
-        print("CLAMP GRAD_OUTPUT:", grad_output)
         return grad_output * mask, None, None
 
 class Log(Function):
@@ -678,3 +675,39 @@ class Broadcast(Function):
         ]
     
         return grad_inputs
+    
+    
+    
+    
+"""
+    PAD
+    FOLD
+    UNFOLD
+"""
+
+class Pad(Function):
+    
+    @staticmethod
+    def forward(ctx: Context, input: Tensor, dim: int, pad_left: int, pad_right: int, value: float = 0.0):
+        ctx.input_shape = input.shape
+        ctx.dim = dim
+        ctx.pad_left = pad_left
+        ctx.pad_right = pad_right
+        ctx.value = value
+        
+        return input.pad(dim, pad_left, pad_right, value)
+    
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor):
+        input_shape = ctx.input_shape
+        dim = ctx.dim
+        pad_left = ctx.pad_left
+        pad_right = ctx.pad_right
+        
+        grad_input = zeros(input_shape)
+        
+        # Copy the gradient to the original position
+        grad_input.narrow(dim, pad_left, input_shape[dim]).copy_(grad_output)
+        
+        return grad_input, None, None, None, None
+    

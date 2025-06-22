@@ -1,4 +1,4 @@
-from typing import Dict, Union
+from typing import Dict, Union, Optional
 from clownpiece import Tensor, zeros_like
 
 
@@ -68,6 +68,10 @@ class Module():
   """
     Parameters
   """
+  def register_parameter(self, name: str, param: Optional[Parameter]):
+    if not isinstance(param, (Parameter, None)):
+      raise TypeError(f"Expected Parameter or None, got {type(param)}")
+    self._parameters[name] = param
 
   def parameters(self):
     for param in self._parameters.values():
@@ -87,6 +91,10 @@ class Module():
   """
     Buffers
   """
+  def register_buffer(self, name: str, buffer: Optional[Buffer]):
+    if not isinstance(buffer, (Buffer, None)):
+      raise TypeError(f"Expected Buffer or None, got {type(buffer)}")
+    self._buffers[name] = buffer
 
   def buffers(self):
     for buffer in self._buffers.values():

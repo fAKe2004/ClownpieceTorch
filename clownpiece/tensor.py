@@ -1,7 +1,7 @@
 from . import tensor_impl as cp
 # from cp import TensorBaseImpl
 
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 import copy
 import importlib
 
@@ -165,7 +165,6 @@ class TensorBase:
   
   @classmethod
   def cat(cls, inputs: List["TensorBase"], dim=0, **kwargs):
-    # print("Base Cat called with inputs:", inputs, "dim:", dim)
     if not isinstance(inputs, (list, tuple)):
       raise TypeError(f"Expected list or tuple, got {type(inputs).__name__}")
     if not all(isinstance(t, TensorBase) for t in inputs):
@@ -175,7 +174,6 @@ class TensorBase:
   
   @classmethod
   def broadcast(cls, *inputs: "TensorBase"):
-    # print("Base Broadcast called with inputs:", inputs)
     if not all(isinstance(t, TensorBase) for t in inputs):
       raise TypeError("All inputs must be instances of TensorBase")
     impls = cp.TensorBaseImpl.broadcast([t._impl for t in inputs])
@@ -212,7 +210,6 @@ class TensorBase:
     return type(self)(self._impl.clone())
   
   def __repr__(self):
-    # return reqiures_grad = getattr(self, 'requires_grad', None)
     return f"{self._impl}"
 
   def tolist(self):
@@ -326,7 +323,6 @@ class TensorBase:
     Part3
   """
   def sum(self, dim=None, keepdims=False):
-    # print("sum called with dim=", dim, "keepdims=", keepdims)
     if isinstance(dim, int):
       summed_impl = self._impl.sum(dim, keepdims)
       return self.__class__(summed_impl)
@@ -443,16 +439,31 @@ class TensorBase:
     if not isinstance(dim, int):
       raise TypeError(f"Expected int for dim, got {type(dim).__name__}")
     split_impls = cp.split(self._impl, split, dim)
-    return [self.__class__(impl) for impl in split_impls]
-
-  # def contiguous(self):
-  #   return TensorBase(np.ascontiguousarray(self))
-  # def transpose(self, dim0=-1, dim1=-2):
-  #   return TensorBase(super().swapaxes(dim0, dim1))
-  # def copy_(self, other):
-  #   self[:] = other
+    return [self.__class__(impl) for impl in split_impls]  
   
+  """
+  PAD
+  FOLD
+  UNFOLD
+  """
   
+  def pad(self, dim: int, pad_left: int, pad_right: int, value: float = 0.0):
+    if not isinstance(dim, int) or not isinstance(pad_left, int) or not isinstance(pad_right, int):
+      raise TypeError(f"Expected int for dim, pad_left and pad_right, got {type(dim).__name__}, {type(pad_left).__name__} and {type(pad_right).__name__}")
+    padded_impl = self._impl.pad(dim, pad_left, pad_right, value)
+    return self.__class__(padded_impl)
+  
+  def fold(self, output_shape: List[int], kernel_size: List[int], stride: List[int] = [1, 1]):
+    
+    fold_impl = self._impl.fold(tuple(output_shape), tuple(kernel_size), tuple(stride))
+    
+    return self.__class__(fold_impl)
+  
+  def unfold(self, output_shape: List[int], kernel_size: List[int], stride: List[int] = [1, 1]):
+    
+    unfold_impl = self._impl.unfold(tuple(output_shape), tuple(kernel_size), tuple(stride))
+    
+    return self.__class__(unfold_impl)
 
 """
   Utils for Binding
@@ -480,11 +491,8 @@ def scalar_to_tensor(function):
 def tensor_op(op_name, Function_name):
   def decorator(function):
     def wrapped_function(*args, **kwargs):
-      # print("\n\nEntering Tensor_op with op_name:", op_name)
       if not is_grad_enabled_with_params(*args):
-        # print("Grad not enabled, calling TensorBase method directly")
         op = getattr(TensorBase, op_name)
-        # print(f"Calling TensorBase.{op_name} with args={args}, kwargs={kwargs}")
         raw_results = op(*args, **kwargs)
         
         def TensorBase2Tensor(x):
@@ -496,7 +504,6 @@ def tensor_op(op_name, Function_name):
           return TensorBase2Tensor(raw_results)
       
       module = importlib.import_module("clownpiece.autograd.function")
-      # print("module name =", cp.autograd.function.__file__)
       FunctionClass = getattr(module, Function_name)
 
       return function(*args, **kwargs, FunctionClass=FunctionClass)
@@ -522,25 +529,6 @@ class Tensor(TensorBase):
     self.grad_fn = None
     self.output_nr = 0
 
-  def copy_(self, other):
-    return super().copy_(other)
-
-#   def __array_finalize__(self, obj):
-#     # if obj is None:
-#     #   return
-#     self.requires_grad = getattr(obj, 'requires_grad', False)
-#     self.grad_fn = getattr(obj, 'grad_fn', None)
-#     self.grad = getattr(obj, 'grad', None)
-#     self.output_nr = getattr(obj, 'output_nr', 0)
-
-#     # Ensure attributes are initialized if not present on obj
-#     if not hasattr(self, 'grad_fn'):
-#         self.grad_fn = None
-#     if not hasattr(self, 'grad'):
-#         self.grad = None
-#     if not hasattr(self, 'output_nr'):
-#         self.output_nr = 0
-        
   """
     Other
   """
@@ -552,14 +540,7 @@ class Tensor(TensorBase):
     if requires_grad is None:
       requires_grad = is_grad_enabled()
     self.requires_grad = requires_grad 
-  
-  def __gt__(self,other): return super().__gt__(other)
-  def __lt__(self,other): return super().__lt__(other)
-  def __ge__(self,other): return super().__ge__(other)
-  def __le__(self,other): return super().__le__(other)
-  def __eq__(self,other): return super().__eq__(other)
-  def __ne__(self,other): return super().__ne__(other)
-  
+
   def tolist(self):
     return super().tolist()
 
