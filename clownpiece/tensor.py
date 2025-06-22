@@ -36,6 +36,68 @@ def scalar_to_tensorbase(function):
         new_args.append(arg)
     return function(*new_args, **kwargs)
   return wrapped_function
+
+def tensor_base_op(impl_method_name):
+  """
+  Decorator for TensorBase operations that follow the pattern:
+  return self.__class__(self._impl.method_name(*args))
+  """
+  def decorator(func):
+    def wrapper(self, *args, **kwargs):
+      impl_method = getattr(self._impl, impl_method_name)
+      result_impl = impl_method(*args, **kwargs)
+      return self.__class__(result_impl)
+    return wrapper
+  return decorator
+
+def tensor_base_binary_op(impl_method_name, reverse=False):
+  """
+  Decorator for TensorBase binary operations that support both TensorBase and scalar types.
+  @param impl_method_name: The name of the method on the _impl object
+  @param reverse: If True, this is a reverse operation (e.g., __radd__)
+  """
+  def decorator(func):
+    def wrapper(self, other):
+      if isinstance(other, TensorBase):
+        if reverse:
+          result_impl = getattr(other._impl, impl_method_name)(self._impl)
+        else:
+          result_impl = getattr(self._impl, impl_method_name)(other._impl)
+        return self.__class__(result_impl)
+      elif isinstance(other, (int, float)):
+        if reverse:
+          # For reverse operations with scalars, use the reverse method if available
+          reverse_method_name = impl_method_name.replace('__', '__r', 1) if '__' in impl_method_name else f'__r{impl_method_name}__'
+          if hasattr(self._impl, reverse_method_name):
+            result_impl = getattr(self._impl, reverse_method_name)(other)
+          else:
+            # Fallback to regular method (some operations are commutative)
+            result_impl = getattr(self._impl, impl_method_name)(other)
+        else:
+          result_impl = getattr(self._impl, impl_method_name)(other)
+        return self.__class__(result_impl)
+      else:
+        raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
+    return wrapper
+  return decorator
+
+def tensor_base_comparison_op(impl_method_name):
+  """
+  Decorator for TensorBase comparison operations.
+  """
+  def decorator(func):
+    def wrapper(self, value):
+      if isinstance(value, TensorBase):
+        result_impl = getattr(self._impl, impl_method_name)(value._impl)
+        return self.__class__(result_impl)
+      elif isinstance(value, (int, float)):
+        result_impl = getattr(self._impl, impl_method_name)(value)
+        return self.__class__(result_impl)
+      else:
+        raise TypeError(f"Expected TensorBase, int or float, got {type(value).__name__}")
+    return wrapper
+  return decorator
+
 """
   Tensor Base Class
 """
@@ -160,17 +222,13 @@ class TensorBase:
   """
     Part1
   """
+  def is_contiguous(self): return self._impl.is_contiguous()
 
-  def contiguous(self):
-    contiguous_impl = self._impl.contiguous()
-    return self.__class__(contiguous_impl)
-  
-  def is_contiguous(self):
-    return self._impl.is_contiguous()
-  
-  def transpose(self, dim0=-1, dim1=-2):
-    transposed_impl = self._impl.transpose(dim0, dim1)
-    return self.__class__(transposed_impl) 
+  @tensor_base_op('contiguous')
+  def contiguous(self): pass
+
+  @tensor_base_op('transpose')
+  def transpose(self, dim0=-1, dim1=-2): pass 
   
   def copy_(self, other):
     if isinstance(other, TensorBase):
@@ -182,17 +240,36 @@ class TensorBase:
     Part2
   """
   
-  def __neg__(self): return self.__class__(self._impl.__neg__())
-  def sign(self): return self.__class__(self._impl.sign())
-  def abs(self): return self.__class__(self._impl.abs())
-  def sin(self): return self.__class__(self._impl.sin())
-  def cos(self): return self.__class__(self._impl.cos())
-  def tanh(self): return self.__class__(self._impl.tanh())
-  def clamp(self, min_val, max_val):
-    clamped_impl = self._impl.clamp(min_val, max_val)
-    return self.__class__(clamped_impl)
-  def log(self): return self.__class__(self._impl.log())
-  def exp(self): return self.__class__(self._impl.exp())
+  @tensor_base_op('__neg__')
+  def __neg__(self): pass
+  
+  @tensor_base_op('sign')
+  def sign(self): pass
+  
+  @tensor_base_op('abs')
+  def abs(self): pass
+  
+  @tensor_base_op('sin')
+  def sin(self): pass
+  
+  @tensor_base_op('cos')
+  def cos(self): pass
+  
+  @tensor_base_op('tanh')
+  def tanh(self): pass
+  
+  @tensor_base_op('log')
+  def log(self): pass
+  
+  @tensor_base_op('exp')
+  def exp(self): pass
+  
+  @tensor_base_op('sqrt')
+  def sqrt(self): pass
+  
+  @tensor_base_op('clamp')
+  def clamp(self, min_val, max_val): pass
+  
   def pow(self, exponent):
     if isinstance(exponent, TensorBase):
       exponent = exponent._impl
@@ -200,68 +277,50 @@ class TensorBase:
       raise TypeError(f"Expected int, float or TensorBase, got {type(exponent).__name__}")
     powered_impl = self._impl.pow(exponent)
     return self.__class__(powered_impl)
-  def sqrt(self):
-    sqrt_impl = self._impl.sqrt()
-    return self.__class__(sqrt_impl)
 
 
-  def __add__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(self._impl.__add__(other._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__add__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
-  def __radd__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(other._impl.__add__(self._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__radd__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
-  def __sub__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(self._impl.__sub__(other._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__sub__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
-  def __rsub__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(other._impl.__sub__(self._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__rsub__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
-  def __mul__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(self._impl.__mul__(other._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__mul__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
-  def __rmul__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(other._impl.__mul__(self._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__rmul__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
-  def __truediv__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(self._impl.__truediv__(other._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__truediv__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
-  def __rtruediv__(self, other):
-    if isinstance(other, TensorBase): return self.__class__(other._impl.__truediv__(self._impl))
-    elif isinstance(other, (int, float)): return self.__class__(self._impl.__rtruediv__(other))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(other).__name__}")
+
+  @tensor_base_binary_op('__add__')
+  def __add__(self, other): pass
+  
+  @tensor_base_binary_op('__add__', reverse=True)
+  def __radd__(self, other): pass
+  
+  @tensor_base_binary_op('__sub__')
+  def __sub__(self, other): pass
+  
+  @tensor_base_binary_op('__sub__', reverse=True)
+  def __rsub__(self, other): pass
+  
+  @tensor_base_binary_op('__mul__')
+  def __mul__(self, other): pass
+  
+  @tensor_base_binary_op('__mul__', reverse=True)
+  def __rmul__(self, other): pass
+  
+  @tensor_base_binary_op('__truediv__')
+  def __truediv__(self, other): pass
+  
+  @tensor_base_binary_op('__truediv__', reverse=True)
+  def __rtruediv__(self, other): pass
     
-  def __gt__(self, value):
-    if isinstance(value, TensorBase): return self.__class__(self._impl.__gt__(value._impl))
-    elif isinstance(value, (int, float)): return self.__class__(self._impl.__gt__(value))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(value).__name__}")
-  def __lt__(self, value):
-    if isinstance(value, TensorBase): return self.__class__(self._impl.__lt__(value._impl))
-    elif isinstance(value, (int, float)): return self.__class__(self._impl.__lt__(value))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(value).__name__}")
-  def __ge__(self, value):
-    if isinstance(value, TensorBase): return self.__class__(self._impl.__ge__(value._impl))
-    elif isinstance(value, (int, float)): return self.__class__(self._impl.__ge__(value))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(value).__name__}")
-  def __le__(self, value):
-    if isinstance(value, TensorBase): return self.__class__(self._impl.__le__(value._impl))
-    elif isinstance(value, (int, float)): return self.__class__(self._impl.__le__(value))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(value).__name__}")
-  def __eq__(self, value):
-    if isinstance(value, TensorBase): return self.__class__(self._impl.__eq__(value._impl))
-    elif isinstance(value, (int, float)): return self.__class__(self._impl.__eq__(value))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(value).__name__}")
-  def __ne__(self, value):
-    if isinstance(value, TensorBase): return self.__class__(self._impl.__ne__(value._impl))
-    elif isinstance(value, (int, float)): return self.__class__(self._impl.__ne__(value))
-    else: raise TypeError(f"Expected TensorBase, int or float, got {type(value).__name__}")
+  @tensor_base_comparison_op('__gt__')
+  def __gt__(self, value): pass
+  
+  @tensor_base_comparison_op('__lt__')
+  def __lt__(self, value): pass
+  
+  @tensor_base_comparison_op('__ge__')
+  def __ge__(self, value): pass
+  
+  @tensor_base_comparison_op('__le__')
+  def __le__(self, value): pass
+  
+  @tensor_base_comparison_op('__eq__')
+  def __eq__(self, value): pass
+  
+  @tensor_base_comparison_op('__ne__')
+  def __ne__(self, value): pass
   
   """
     Part3
@@ -444,8 +503,7 @@ def tensor_op(op_name, Function_name):
     
     return wrapped_function
   return decorator  
-  
-  
+
 """
   Tensor Class 
 """
@@ -467,21 +525,21 @@ class Tensor(TensorBase):
   def copy_(self, other):
     return super().copy_(other)
 
-#   def __array_finalize__(self, obj):
-#     # if obj is None:
-#     #   return
-#     self.requires_grad = getattr(obj, 'requires_grad', False)
-#     self.grad_fn = getattr(obj, 'grad_fn', None)
-#     self.grad = getattr(obj, 'grad', None)
-#     self.output_nr = getattr(obj, 'output_nr', 0)
+  def __array_finalize__(self, obj):
+    # if obj is None:
+    #   return
+    self.requires_grad = getattr(obj, 'requires_grad', False)
+    self.grad_fn = getattr(obj, 'grad_fn', None)
+    self.grad = getattr(obj, 'grad', None)
+    self.output_nr = getattr(obj, 'output_nr', 0)
 
-#     # Ensure attributes are initialized if not present on obj
-#     if not hasattr(self, 'grad_fn'):
-#         self.grad_fn = None
-#     if not hasattr(self, 'grad'):
-#         self.grad = None
-#     if not hasattr(self, 'output_nr'):
-#         self.output_nr = 0
+    # Ensure attributes are initialized if not present on obj
+    if not hasattr(self, 'grad_fn'):
+        self.grad_fn = None
+    if not hasattr(self, 'grad'):
+        self.grad = None
+    if not hasattr(self, 'output_nr'):
+        self.output_nr = 0
         
   """
     Other
