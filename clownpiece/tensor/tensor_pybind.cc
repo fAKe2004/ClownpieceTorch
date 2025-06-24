@@ -332,9 +332,11 @@ PYBIND11_MODULE(tensor_impl, m) {
         .def_static("randn_like", [](const at::Tensor &self) {
             return at::randn_like(self);
         }, "Create a tensor with random values from a normal distribution with the same shape and type as another tensor")
-        .def("pad", &at::Tensor::pad, py::arg("dim"), py::arg("pad_left"), py::arg("pad_right"), py::arg("value") = 0.0, "Pads tensor.")
-        .def("unfold", &at::Tensor::unfold, py::arg("output_shape"), py::arg("kernel_size"), py::arg("stride") = std::pair<int, int>{1, 1}, "Extracts sliding local blocks from a batched input tensor.")
-        .def("fold", &at::Tensor::fold, py::arg("output_shape"), py::arg("kernel_size"), py::arg("stride") = std::pair<int, int>{1, 1}, "Combines an array of sliding local blocks into a large containing tensor.")
+
+        /* week 3 adds on*/
+
+        .def("mean", &at::Tensor::mean, py::arg("dim"), py::arg("keepdims") = false, "Calculate the mean along a dimension")
+        .def("var", &at::Tensor::var, py::arg("dim"), py::arg("keepdims") = false, py::arg("unbiased") = true, "Calculate the variance along a dimension")
         ;
 
     /*** Part II: utils, clone, make contiguous and copy_ ***/

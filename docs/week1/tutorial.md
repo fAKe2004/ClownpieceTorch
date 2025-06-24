@@ -403,7 +403,7 @@ You must pass both `grade_all.py` and `grade_comprehensive.ipynb`.
 
 To see full traceback in debug mode, use `DEBUG=1 python grade_part{i}.py`.
 
-**Important Remark: For all invalid cases and exceptions (out_of_range, invalid_argument, etc.), your code must throw instance of `std::runtime_error` to be properly graded with test scripts**
+**Important Remark: You must first implement the `data_at` (which get the i-th element in the logical order) method to pass any test, as graderlib relies on this function**
 
 >> Hint: The coding order presented below is a suggestion, not a strict requirement. You may find it beneficial to skip ahead to implement utility functions from later sections if they can assist with earlier parts. Read the tensor.h thoroughly to grasp the outline of our tensor library.
 
@@ -1055,6 +1055,30 @@ Returns a 1-D tensor of `num_steps` values linearly spaced between `start` and `
 - **Returns**: A 1D tensor of evenly spaced values from `start` to `end`.
 
 ---
+
+## The End?
+### Part UNKOWN
+
+When your TAs are working on week3/week4's project, they noticed that some ops are missing, so please also implement:
+
+```c++
+  /*
+    Week3 add-ons
+  */
+  Tensor mean(int dim, bool keepdims=false) const;
+  Tensor var(int dim, bool keepdims=false, bool unbiased=true) const;
+```
+
+Tests are included in part6 (initially commented out). These ops has `score=0`, but make sure you pass them.
+.
+> **Tensor mean(int dim, bool keepdims=false) const;**
+
+Compute the average along given dimension.
+
+> **Tensor var(int dim, bool keepdims=false, bool unbiased=true) const;**
+
+Compute the variance along given dimension. Unbiased means divided by $n-1$, otherwise $n$.
+
 ---
 
 # Optional Challenge: Parallelize Tensor Computation

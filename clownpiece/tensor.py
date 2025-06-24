@@ -441,29 +441,17 @@ class TensorBase:
     split_impls = cp.split(self._impl, split, dim)
     return [self.__class__(impl) for impl in split_impls]  
   
-  """
-  PAD
-  FOLD
-  UNFOLD
-  """
+  def mean(self, dim: int, keepdims: bool = False):
+    if not isinstance(dim, int):
+      raise TypeError(f"Expected int for dim, got {type(dim).__name__}")
+    mean_impl = self._impl.mean(dim, keepdims)
+    return self.__class__(mean_impl)
   
-  def pad(self, dim: int, pad_left: int, pad_right: int, value: float = 0.0):
-    if not isinstance(dim, int) or not isinstance(pad_left, int) or not isinstance(pad_right, int):
-      raise TypeError(f"Expected int for dim, pad_left and pad_right, got {type(dim).__name__}, {type(pad_left).__name__} and {type(pad_right).__name__}")
-    padded_impl = self._impl.pad(dim, pad_left, pad_right, value)
-    return self.__class__(padded_impl)
-  
-  def fold(self, output_shape: List[int], kernel_size: List[int], stride: List[int] = [1, 1]):
-    
-    fold_impl = self._impl.fold(tuple(output_shape), tuple(kernel_size), tuple(stride))
-    
-    return self.__class__(fold_impl)
-  
-  def unfold(self, output_shape: List[int], kernel_size: List[int], stride: List[int] = [1, 1]):
-    
-    unfold_impl = self._impl.unfold(tuple(output_shape), tuple(kernel_size), tuple(stride))
-    
-    return self.__class__(unfold_impl)
+  def var(self, dim: int, keepdims: bool = False, unbiased: bool = True):
+    if not isinstance(dim, int):
+      raise TypeError(f"Expected int for dim, got {type(dim).__name__}")
+    var_impl = self._impl.var(dim, keepdims, unbiased)
+    return self.__class__(var_impl)
 
 """
   Utils for Binding
@@ -751,6 +739,16 @@ class Tensor(TensorBase):
   @tensor_op('broadcast', 'Broadcast')
   def broadcast(inputs: List["Tensor"], FunctionClass=None) -> "Tensor":
       return FunctionClass().apply(*inputs)
+  
+  @tensor_op('mean', 'Mean')
+  def mean(self, dim: int, keepdims: bool = False, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim, keepdims)
+    
+  @tensor_op('var', 'Var')
+  def var(self, dim: int, keepdims: bool = False, unbiased: bool = True, FunctionClass=None) -> "Tensor":
+      return FunctionClass().apply(self, dim, keepdims, unbiased)
+      
+  
   
   """
   STR

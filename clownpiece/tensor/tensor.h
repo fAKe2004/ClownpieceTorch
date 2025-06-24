@@ -258,17 +258,10 @@ class Tensor {
   static vec<Tensor> broadcast(const vec<Tensor>& tensors);
 
   /*
-  PAD
-  FOLD
-  UNFOLD
+    Week3 add-ons
   */
-
-  Tensor pad(int dim, int pad_left, int pad_right, dtype value=0) const;
-
-  Tensor fold(std::pair<int, int> output_shape, std::pair<int, int> kernel_size, std::pair<int, int> stride = {1, 1}) const;
-
-  Tensor unfold(std::pair<int, int> output_shape, std::pair<int, int> kernel_size, std::pair<int, int> stride = {1, 1}) const;
-
+  Tensor mean(int dim, bool keepdims=false) const;
+  Tensor var(int dim, bool keepdims=false, bool unbiased=true) const;
 };
 
 

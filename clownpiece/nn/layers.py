@@ -1,23 +1,29 @@
 from typing import Optional
 from ..tensor import Tensor
 from .module import Module, Parameter
+from . import init
 import math
 
 
 class Linear(Module):
-    def __init__(self, in_features: int, out_features: int, bias: bool = True):
+    def __init__(self, in_features: int, out_features: int, bias: bool=True):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        
-        k = 1.0 / self.in_features
-        limit = math.sqrt(k)
-        self.weight = Parameter(Tensor.rand(out_features, in_features) * 2 * limit - limit)
-        
+        self.weight = Parameter(Tensor.empty(out_features, in_features))
         if bias:
-            self.bias = Parameter(Tensor.rand(out_features) * 2 * limit - limit)
+            self.bias = Parameter(Tensor.empty(out_features))
         else:
             self.register_parameter('bias', None)
+        self.reset_parameters()
+
+    def reset_parameters(self) -> None:
+        bound = math.sqrt(1 / self.in_features)
+        init.uniform_(self.weight, -bound, bound)
+        if self.bias is not None:
+          init.uniform_(self.bias, -bound, bound)
+        # or equvialently, use 
+        # init.kaiming_uniform_(self.weight, a = math.sqrt(5))
 
     def forward(self, x: Tensor) -> Tensor:
         output = x @ self.weight.T
@@ -25,45 +31,56 @@ class Linear(Module):
             output = output + self.bias
         return output
 
-    def __repr__(self):
-        return f"Linear(in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None})"
-
+    def extra_repr(self):
+        return f"in_features={self.in_features}, out_features={self.out_features}, bias={self.bias is not None}"
 
 class Embedding(Module):
-    def __init__(self, num_embeddings: int, embedding_dim: int):
+    def __init__(self, num_embd: int, embd_dim: int):
         super().__init__()
-        self.num_embeddings = num_embeddings
-        self.embedding_dim = embedding_dim
-        self.weight = Parameter(Tensor.randn(num_embeddings, embedding_dim))
+        self.num_embd = num_embd
+        self.embd_dim = embd_dim
+        self.weight = Parameter(Tensor.randn((num_embd, embd_dim)))
 
     def forward(self, x: Tensor) -> Tensor:
         return self.weight[x]
 
-    def __repr__(self):
-        return f"Embedding(num_embeddings={self.num_embeddings}, embedding_dim={self.embedding_dim})"
+    def extra_repr(self):
+        return f"num_embd={self.num_embd}, embd_dim={self.embd_dim}"
 
 
 class LayerNorm(Module):
-    def __init__(self, normalized_shape, eps: float = 1e-5):
+    
+    def __init__(self, normalized_shape, eps: float = 1e-5, affine: bool = True):
         super().__init__()
         if isinstance(normalized_shape, int):
             normalized_shape = (normalized_shape,)
         self.normalized_shape = tuple(normalized_shape)
+        self.normailzed_numel = 1
+        for size_dim in self.normalized_shape:
+            self.normailzed_numel *= size_dim
+            
         self.eps = eps
-        self.weight = Parameter(Tensor.ones(self.normalized_shape))
-        self.bias = Parameter(Tensor.zeros(self.normalized_shape))
+        
+        if affine:
+            self.affine = Linear(self.normailzed_numel, self.normailzed_numel, bias=True)
+        else:
+            self.affine = None
 
     def forward(self, x: Tensor) -> Tensor:
-        dims = tuple(range(x.ndim - len(self.normalized_shape), x.ndim))
-        mean = x.mean(axis=dims, keepdims=True)
-        var = x.var(axis=dims, keepdims=True, unbiased=True)
-        
-        x_normalized = (x - mean) / ((var + self.eps).sqrt())
-        
-        return self.weight * x_normalized + self.bias
+        input_shape = x.shape
+        x = x.reshape((-1, self.normailzed_numel))
+        mean = x.mean(dim=-1, keepdim=True)
+        var = x.var(dim=-1, keepdim=True)
+        x = (x - mean) / (var + self.eps).sqrt()
+        if self.affine:
+            x = self.affine(x)
+        return x.reshape(input_shape)
+    
+    def extra_repr(self):
+        return f"normalized_shape={self.normalized_shape}, eps={self.eps}, affine={self.affine is not None}"
 
-    def __repr__(self):
-        return f"LayerNorm(normalized_shape={self.normalized_shape}, eps={self.eps})"
+class BatchNorm(Module):
+    pass
 
 class MultiheadAttention(Module):
     def __init__(self, embed_dim: int, num_heads: int, bias: bool = True):
@@ -103,5 +120,5 @@ class MultiheadAttention(Module):
         
         return self.out_proj(context)
 
-    def __repr__(self):
-        return f"MultiheadAttention(embed_dim={self.embed_dim}, num_heads={self.num_heads})"
+    def extra_repr(self):
+        return f"embed_dim={self.embed_dim}, num_heads={self.num_heads}, head_dim={self.head_dim}, bias={self.q_proj.bias is not None}"

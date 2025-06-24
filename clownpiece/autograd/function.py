@@ -427,7 +427,7 @@ class MatMul(Function):
 """
 
 def reduce_forward_wrapper(forward_impl):
-    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int]], keepdims: bool = False):
+    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int]], keepdims: bool = False, *args, **kwargs):
         ctx.input_shape = input.shape
         if dim is None:
             ctx.dim = list(range(input.dim()))
@@ -438,7 +438,7 @@ def reduce_forward_wrapper(forward_impl):
         ctx.dim.sort(reverse=True)
         ctx.keepdims = keepdims
         
-        output = forward_impl(ctx, input, dim, keepdims)
+        output = forward_impl(ctx, input, dim, keepdims, *args, **kwargs)
         
         return output
     
@@ -676,38 +676,40 @@ class Broadcast(Function):
     
         return grad_inputs
     
-    
-    
-    
-"""
-    PAD
-    FOLD
-    UNFOLD
-"""
-
-class Pad(Function):
-    
+class Mean(Function):
     @staticmethod
-    def forward(ctx: Context, input: Tensor, dim: int, pad_left: int, pad_right: int, value: float = 0.0):
-        ctx.input_shape = input.shape
-        ctx.dim = dim
-        ctx.pad_left = pad_left
-        ctx.pad_right = pad_right
-        ctx.value = value
-        
-        return input.pad(dim, pad_left, pad_right, value)
+    @reduce_forward_wrapper
+    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool):
+        return input.mean(dim, keepdims=keepdims)
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
-        input_shape = ctx.input_shape
-        dim = ctx.dim
-        pad_left = ctx.pad_left
-        pad_right = ctx.pad_right
+        dim = ctx.dim[0]
+        if not ctx.keepdims:
+            grad_output = grad_output.unsqueeze(dim)
         
-        grad_input = zeros(input_shape)
+        grad_input = grad_output.broadcast_to(ctx.input_shape) / (ctx.input_shape[dim])
         
-        # Copy the gradient to the original position
-        grad_input.narrow(dim, pad_left, input_shape[dim]).copy_(grad_output)
-        
-        return grad_input, None, None, None, None
+        return grad_input, None, None
     
+class Var(Function):
+    @staticmethod
+    @reduce_forward_wrapper
+    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool, unbiased: bool):
+        ctx.input = input
+        ctx.unbiased = unbiased
+        return input.var(dim, keepdims=keepdims, unbiased=unbiased)
+    
+    @staticmethod
+    def backward(ctx: Context, grad_output: Tensor):
+        dim = ctx.dim[0]
+        if not ctx.keepdims:
+            grad_output = grad_output.unsqueeze(dim)
+        n = ctx.input_shape[dim]
+        den = n - 1 if ctx.unbiased else n
+
+        input = ctx.input
+        mean = input.mean(dim, keepdims=True)
+        grad_input = 2 * (input - mean) / den
+        
+        return grad_input, None, None, None
