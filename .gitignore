@@ -197,3 +197,4 @@ cython_debug/
 .vscode/
 
 test.py
+mnist/data/*

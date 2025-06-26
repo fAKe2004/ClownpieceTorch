@@ -1094,8 +1094,8 @@ namespace at {
   }
 
   Tensor zeros(const shape_t& shape) {
-    if (shape.empty())
-      throw std::runtime_error("zeros: shape cannot be empty");
+    // if (shape.empty())
+    //   throw std::runtime_error("zeros: shape cannot be empty");
     return Tensor(shape, 0.0);
   }
   Tensor zeros_like(const Tensor& ref) {
@@ -1103,8 +1103,8 @@ namespace at {
   }
 
   Tensor randn(const shape_t& shape) {
-    if (shape.empty())
-      throw std::runtime_error("randn: shape cannot be empty");
+    // if (shape.empty())
+      // throw std::runtime_error("randn: shape cannot be empty");
     
     std::function<dtype()> randn = []() -> dtype {
       return random::randn(random::mt19937_rng, 0, 1);

@@ -17,16 +17,18 @@ class CrossEntropyLoss(Module):
     def __init__(self):
       super().__init__()
 
-    def forward(self, input: Tensor, target: Tensor) -> Tensor:
-      if input.ndim != 2 or target.ndim != 1:
-          raise ValueError("Input must be 2D and target must be 1D")
-      if input.shape[0] != target.shape[0]:
-          raise ValueError(f"Input batch size {input.shape[0]} does not match target batch size {target.shape[0]}")
+    def forward(self, logits: Tensor, target: Tensor) -> Tensor:
+      if logits.shape[:-1] != target.shape:
+          raise ValueError(f"logits batch size {logits.shape[:-1]} does not match target batch size {target.shape}")
+
+      logits = logits.reshape((-1, logits.shape[-1]))
+      target = target.reshape(-1)
       
-      log_probs = input.log().softmax(dim=-1)
+      log_probs = logits.softmax(dim=-1).log()
       selected = []
-      for i in range(input.shape[0]):
-          selected += [log_probs[i, target[i]]]
+      for i in range(logits.shape[0]):
+          index = round(target[i].item())
+          selected += [log_probs[i, index]]
           
-      return -sum(selected) / input.shape[0]
+      return -sum(selected) / logits.shape[0]
   

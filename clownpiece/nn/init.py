@@ -45,7 +45,7 @@ def _calculate_fan_in_and_fan_out(tensor: Tensor) -> tuple[int, int]:
         num_output_fmaps = tensor.shape[0]
         receptive_field_size = 1
         if tensor.dim() > 2:
-            receptive_field_size = tensor.numel() // (num_output_fmaps * num_input_fmaps)
+            receptive_field_size = len(tensor) // (num_output_fmaps * num_input_fmaps)
         fan_in = num_input_fmaps * receptive_field_size
         fan_out = num_output_fmaps * receptive_field_size
     
@@ -57,8 +57,8 @@ def _init_with_generator(
     generator: Callable[[], float]
   ):
   
-  for i in range(tensor.numel()):
-    tensor.data[i] = generator()
+  for i in range(len(tensor)):
+    tensor._impl.change_data_at(i, generator())
   
 def consants_(tensor: Tensor, value: float):
   _init_with_generator(tensor, lambda: value)

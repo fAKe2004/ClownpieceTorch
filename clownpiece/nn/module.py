@@ -14,6 +14,7 @@ class Buffer(Tensor):
 
 
 class Module(object):
+  training: bool
   _init_called: bool = False
   
   _parameters: dict[str, Parameter] = {}
@@ -21,14 +22,27 @@ class Module(object):
   _modules: dict[str, 'Module'] = {}
   
   def __init__(self):
+    self._init_called = True
+    self.training = True
     
     self._parameters = {}
     self._buffers = {}
     self._modules = {}
     
-    self._init_called = True
+  def train(self, flag: bool = True):
+    self.training = flag
+    for module in self._modules.values():
+      module.train(flag)
+    return self
+
+  def eval(self):
+    self.train(False)    
 
   def __setattr__(self, name: str, value):
+    if name != "_init_called" and not self._init_called:
+      raise RuntimeError(f"Module {self.__class__.__name__} is not initialized. "
+                         f"Please call the Module.__init__.")
+    
     if name in ["_parameters", "_buffers", "_modules"]:
       return super().__setattr__(name, value)
     
@@ -51,9 +65,6 @@ class Module(object):
       super().__setattr__(name, value)
       
   def __getattr__(self, name: str):
-    if name in ["_parameters", "_buffers", "_modules"]:
-      return super().__getattr__(name)
-      
     if name in self._parameters:
       return self._parameters[name]
     elif name in self._buffers:
@@ -61,7 +72,7 @@ class Module(object):
     elif name in self._modules:
       return self._modules[name]
     else:
-      return super().__getattr__(name)
+      raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
     
   """
     Forward
@@ -77,7 +88,7 @@ class Module(object):
     Parameters
   """
   def register_parameter(self, name: str, param: Optional[Parameter]):
-    if not isinstance(param, (Parameter, None)):
+    if not isinstance(param, Parameter) and not param is None:
       raise TypeError(f"Expected Parameter or None, got {type(param)}")
     self._parameters[name] = param
 
@@ -102,7 +113,7 @@ class Module(object):
     Buffers
   """
   def register_buffer(self, name: str, buffer: Optional[Buffer]):
-    if not isinstance(buffer, (Buffer, None)):
+    if not isinstance(buffer, Buffer) and not buffer is None:
       raise TypeError(f"Expected Buffer or None, got {type(buffer)}")
     self._buffers[name] = buffer
 

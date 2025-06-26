@@ -268,18 +268,25 @@ Then, let's look at module's member variables:
 
 ```python
 class Module(object):
+  training: bool
+
   _parameters: Dict[str, Parameters]
   _buffers: Dict[str, Buffer]
   _modules: Dict[str, "Module"]
 ```
 
+The `training` indicates whether the module is in training or inferencing mode. This affects the behavior of `forward`, for example:
+
+- `Dropout` is disabled during inferencing.
+- `BatchNorm` uses mean and var recorded from training as constant during inferencing
+
 These three dictionaries record **immediate** parameters, buffers, and child modules belonging to this module. (but not from childrens).
 
 You may have noticed that, in pytorch, when you assign a parameter `P` to attribute of module `M`, then `P` appears in `M`'s `parameters()` method without the need of any explicit declaration "I am a parameter, please register me".
 
-This is accomplished by overriding `__setattr__(self, name: str, value: Any)` function: whenever `self.name = value` happens, this method is called. We can hijack the default assignment behavior, and detects, if `value` is instance of `Parameter`, `Buffer`, or `Module`, and register them to the corresponding dict.
+This is accomplished by overriding `__setattr__(self, name: str, value: Any)` function: whenever `self.name = value` happens, this method is called. We can hijack the default assignment behavior, and detects, if `value` is instance of `Parameter`, `Buffer`, or `Module`, and register them to the corresponding dict. (if `value` is None of them, just call `object.__setattr__(self, name, value)`)
 
-`__getattr__` comes in couple with `__setattr__`, as you have redirect assignment of `Parameter`, `Buffer`, or `Module` to dictionary, but not attribute them self.
+`__getattr__(self, name)` comes in couple with `__setattr__`, but it is called **only when** `name` is not found as ordinary attribute (i.e., `name` is hijecked at `__setattr__`).
 
 Please complete:
 
@@ -295,6 +302,14 @@ class Module(object):
     #
     # this mechanism is optional and does not account for score.
 
+    pass
+
+  def train(self, flag: bool = True):
+    # set module and submodule to training = flag
+    pass
+
+  def eval(self):
+    # set module and submodule to inferencing mode
     pass
 
   def __setattr__(self, name, value):
@@ -429,7 +444,7 @@ This method automatically constructs a hierarchical string representation of the
 * Any extra information provided by `extra_repr()`
 * All submodules (indented for readability)
 
-You **should not** override `__repr__()` directly unless absolutely necessary. Instead, customize the output of `extra_repr()`.
+You **should not** override `__repr__` directly unless absolutely necessary. Instead, customize the output of `extra_repr()`.
 
 To be specific, the output format can be detailed as:
 ```python
@@ -758,3 +773,383 @@ It's very unlikely that your program will fail by chance if it's in fact correct
 ---
 
 ## Part 4 Concrete Modules
+
+## Activations
+
+Besides `tanh`, which is a common activation function for recurrent neural networks, there are several other important activation functions you should know.
+
+### Sigmoid
+The **Sigmoid** function:
+$$
+\sigma(x) = \frac{1}{1 + e^{-x}}
+$$ 
+squashes its input into the range (0, 1). It was historically popular but is now less common in hidden layers due to the vanishing gradient problem and its non-zero-centered output. It's primarily used in the output layer of a binary classifier to produce a probability.
+
+### Tanh
+The **Hyperbolic Tangent (tanh)** function:
+$$
+\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}
+$$
+ squashes its input into the range $(-1, 1)$. Its zero-centered output often makes it a better choice than sigmoid for hidden layers, but it still suffers from vanishing gradients for large inputs.
+
+### ReLU (Rectified Linear Unit)
+
+The **ReLU** function, 
+$$
+f(x) = \begin{cases}
+  x & x \ge 0 \\
+  0 & x < 0 
+\end{cases}
+$$
+
+is the most widely used activation function in deep learning. It is computationally efficient and helps mitigate the vanishing gradient problem for positive inputs. However, it can suffer from the "Dying ReLU" problem, where neurons can become inactive and only output zero.
+
+### Leaky ReLU
+**Leaky ReLU** is a variant of ReLU that aims to solve the "Dying ReLU" problem. It is defined as 
+
+$$
+f(x) = \begin{cases} x & \text{if } x > 0 \\ \alpha x & \text{if } x \le 0 \end{cases}
+$$
+
+where $\alpha$ is a small positive constant (e.g., $0.01$). This allows a small, non-zero gradient when the unit is not active.
+
+> Activations in ReLU family are not differentiable at $0$, but can be trivially assign either left or right derivative as a solution.
+
+Please complete:
+
+```python
+class Sigmoid(Module):
+  pass
+
+class Tanh(Module):
+  pass
+
+class ReLU(Module):
+  pass
+
+class LeakyReLU(Module):
+  pass
+```
+
+> Theoretically speaking, these operations should be supported by C++ backend. But I haven't decided which activations to include during week1, so ..., please write them as combination of elementary ops.
+
+> Besides, you might want to add corresponding `Function` of these activations to `autograd/function.py` for a unified framework. (not mandatory)
+
+---
+
+## Containers
+
+Containers are utilities to organize modules into groups. We will write three most common containers: `Sequential`, `ModuleList`, and `ModuleDict`.
+
+### Sequential
+
+`Sequential` is a container that chains modules together in the order they are passed to the constructor. The output of one module is fed as the input to the next. This is perfect for simple, feed-forward architectures like a basic multi-layer perceptron (MLP).
+
+Example:
+```python
+model = Sequential(
+    Linear(784, 128),
+    ReLU(),
+    Linear(128, 10)
+)
+
+output = model(input_tensor)
+```
+The `forward` method is implicitly defined to pass the input through each layer in sequence.
+
+### ModuleList
+
+`ModuleList` holds submodules in a list-like structure. Like a regular Python list, you can iterate over it, append to it, concatenate them, and access modules by index. However, unlike `Sequential`, it does **not** have a default `forward` method. User must define the `forward` pass themselves. 
+
+The design purpose of `ModuleList` is that: if you put modules into a regular list, and assign it to a parent module, they won't be tracked as children! (a common mistake for beginner to module system). `ModuleList` solves this as itself is a `Module` subclass.
+
+
+Example:
+```python
+class SequntialLinear(Module):
+    def __init__(self):
+        super().__init__()
+        self.layers = ModuleList(
+          [Linear(10, 10) for _ in range(5)]
+        )
+
+    def forward(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
+```
+
+### ModuleDict
+
+`ModuleDict` holds submodules in a dictionary-like structure, allowing you to access them by string keys. Similar to `ModuleList`, it does **not** have a `forward` method. The design purpose of `ModuleDict` is the same as `ModuleList`.
+
+Example:
+```python
+class MyModule(Module):
+    def __init__(self):
+        super().__init__()
+        self.choices = ModuleDict({
+            '1': Linear(1, 10, 3),
+            '2': Linear(10, 10)
+        })
+        self.activations = nn.ModuleDict([
+            ['relu', ReLU()],
+            ['selu', SELU()]
+        ])
+
+
+    def forward(self, x, choice, act):
+        x = self.choices[choice](x)
+        x = self.activations[act](x)
+        return x
+```
+
+Please complete:
+```python
+# containers.py
+class Sequential(Module):
+  
+  def __init__(self, *modules: Module):
+    pass
+
+  def forward(input):
+    pass
+
+
+class ModuleList(Module):
+  
+  def __init__(self, modules: Iterable[Module] = None):
+    # hint: try to avoid using [] (which is mutable) as default argument. it may lead to unexpected behavor.
+    # also be careful to passing dictionary or list around in function, which may be modified inside the function.
+    pass
+
+  def __add__(self, other: Iterable[Module]):
+    pass
+
+  def __setitem(self, index: int, value: Module):
+    pass
+
+  def __getitem__(self, index: int) -> Module:
+    pass
+
+  def __delitem__(self, index: int)
+    pass
+
+  def __len__(self):
+    pass
+
+  def __iter__(self) -> Iterable[Module]:
+    pass
+
+  def append(self, module: Module):
+    pass
+
+  def extend(self, other: Iterable[Module]):
+    pass
+
+class ModuleDict(Module):
+  
+  def __init__(self, dict_: Dict[str, Module]):
+    pass
+
+  def __setitem__(self, name: str, value: Module):
+    pass
+
+  def __getitem__(self, name: str) -> Module:
+    pass
+
+  def __delitem__(self, name: str)
+    pass
+
+  def __len__(self):
+    pass
+
+  def __iter__(self) -> Iterable[str]:
+    pass
+  
+  def keys(self) -> Iterable[str]:
+    pass
+
+  def values(self) -> Iterable[Module]:
+    pass
+
+  def items(self) -> Iterable[Tuple[str, Module]]:
+    pass
+
+  def update(self, dict_: Dict[str, Module]):
+    pass
+```
+
+## Layers
+
+Below are the main layers in `clownpiece/nn/layers.py`. Each is a subclass of `Module`, automatically registers parameters, supports `state_dict`, and applies proper weight initialization.
+
+### Embedding
+**Embedding** performs a lookup from an embedding matrix:
+
+$$
+  \text{out}[i] = \text{weight}[i]
+$$
+
+- Weight: shape `(num_embd, embd_dim)`, initialized with $\mathcal N(0,1)$.
+- Forward input: integer tensor of indices of shape `(...)`
+- Returns: tensor of shape `(..., embd_dim)`
+
+You may think embedding as a linear layer, where input $i$ represent the $i$-th one-hot vector of num_embd dimensions. The weight matmuls to the on-hot vector and produce the output.
+
+Examples: input is a batch of token ids, the output would be corresponding word vectors in the hidden space.
+
+
+
+### LayerNorm
+**LayerNorm** normalizes each sample over its last $d$ dimensions:
+$$
+  \hat{x} = \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}}
+$$
+where $\mu$ and $\sigma^2$ are the mean and variance computed over the normalized dimensions. Optional affine scale and shift are applied when `affine=True`. 
+
+### BatchNorm
+**BatchNorm** normalizes across a batch of $n$ samples:
+$$
+  \mu_B = \frac1m \sum_{i=1}^n x_i,
+  \quad
+  \sigma^2_B = \frac1m \sum_{i=1}^n (x_i - \mu_B)^2
+$$
+
+During training, running mean and var are estimated with momentum $m$:
+$$
+  \mu_{\text{running}} \leftarrow (1-m) \cdot \mu_{\text{runing}} + m \cdot \mu_B \\
+  \sigma_{\text{running}}^2 \leftarrow (1-m) \cdot \sigma_{\text{running}}^2 + m \cdot \sigma_B^2
+$$
+
+and inputs are normalized with $\mu_B, \sigma_B$ as in LayerNorm. Optional affine scale and shift are applied when `affine=True`. 
+
+During evaluation, stored running mean and variance are used instead of batch statistics.
+
+### MultiheadAttention
+**MultiheadAttention** implements scaled dot-product attention for multiple heads:
+
+Single head attention:
+$$
+  \text{Attention}(Q,K,V) = \text{softmax}\Bigl(\frac{QK^T}{\sqrt{d_k}}\Bigr)\,V
+$$
+
+Multihead-attention splits the embedding into `num_heads` heads of dimension $d_k=\dfrac{\text{embed\_dim}}{\text{num\_heads}}$, applies attention in parallel, and concatenates the outputs back. 
+
+A final linear projection combines the heads back to `embed_dim`.
+
+> I admit that the introduction to layers here may be over-simplified. Please refer to torch document for more detail. 
+> - [Embedding](https://docs.pytorch.org/docs/stable/generated/torch.nn.Embedding.html)
+> - [MultiheadAttention](https://docs.pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention.html)
+
+Please complete:
+
+```python
+
+class Embedding(Module):
+    def __init__(self, num_embd: int, embd_dim: int):
+      pass
+
+class LayerNorm(Module):
+    def __init__(self, num_features: int, eps: float = 1e-5, affine: bool = True):
+      # input is reshaped to (-1, num_features) for normalziation.
+      # i.e. num_features is the product of shape of dimensions to normalize
+      # this interface differ from pytorch
+      pass
+    
+class BatchNorm(Module):
+    def __init__(self, num_features: int, eps: float = 1e-5, momentum: float = 0.1, affine: bool = True):
+      pass
+
+class MultiheadAttention(Module):
+    def __init__(self, embed_dim: int, num_heads: int, bias: bool = True):
+      pass
+```
+
+---
+
+## Loss
+
+Loss functions are a critical component of the training process, quantifying the difference—or "error"—between a model's predictions and the ground truth labels. The goal of training is to adjust the model's parameters to minimize the value returned by the loss function.
+
+### MSELoss (Mean Squared Error)
+
+**Mean Squared Error** is the standard loss function for **regression tasks**, where the goal is to predict a continuous value. It measures the average of the squares of the errors between the predicted and actual values.
+
+The formula for a batch of $N$ samples is:
+$$
+\mathcal{L}(y_{\text{pred}}, y_{\text{true}}) = \frac{1}{N} \sum_{i=1}^{N} (y_{\text{true}, i} - y_{\text{pred}, i})^2
+$$
+-   $y_{\text{true}}$ is the tensor of ground truth values.
+-   $y_{\text{pred}}$ is the tensor of model predictions.
+
+Squaring the difference penalizes larger errors more heavily and ensures the result is always non-negative. 
+
+Also, MSE loss is perhas the most intuitive differentiable non-negative loss.
+
+### CrossEntropyLoss
+
+**Cross-Entropy Loss** is the standard loss function for **classification tasks**. It measures the dissimilarity between the predicted probability distribution and the true distribution (which is typically a one-hot vector where the correct class has a probability of 1 and all others have 0).
+
+For a single data point, the cross-entropy loss is calculated as:
+$$
+\mathcal{L}(y_{\text{pred}}, y_{\text{true}}) = - \sum_{c=1}^{C} y_{\text{true}, c} \cdot \log(y_{\text{pred}, c})
+$$
+-   $C$ is the number of classes.
+-   $y_{\text{true}, c}$ is 1 if $c$ is the correct class, and 0 otherwise.
+-   $y_{\text{pred}, c}$ is the model's predicted probability for class $c$.
+
+This equation simplifies to $-\log(p_k)$, where $p_k$ is the predicted probability of the correct class $k$. Minimizing this loss is equivalent to maximizing the log-probability of the correct class.
+
+> **Numerical Stability**: In common practice, `CrossEntropyLoss` is combined with a `LogSoftmax` function. This operation is more numerically stable than applying a `Softmax` and then a `log` separately. User only feed the loss function with logits (unnormalized output from classification model) and correct label. 
+
+> Note that: **logits is not predicted probability -- the softmax(logits) is**.
+
+
+
+Please complete:
+```python
+# loss.py
+class MSELoss(Module):
+  def __init__(self, reduction: str = 'mean'):
+    pass
+  def forward(self, input: Tensor, target: Tensor) -> Tensor:
+    pass
+
+class CrossEntropyLoss(Module):
+  def __init__(self, reduction: str = 'mean'):
+    pass
+  def forward(self, logits: Tensor, target: Tensor) -> Tensor:
+    # logits is of shape (..., num_class)
+    # target is of shape (...), and it's value indicate the index of correct label
+
+    # You need to ensure your implement is differentiable under our autograd engine.
+    # However, you can assume target has requires_grad=False and ignore the gradient flow towards it.
+    pass
+```
+
+Run `grade_part4_{category of module}.py` to test your code, or `grade_part4.py` to test all.
+
+----
+
+# Putting It All Together
+
+Congratulations! You have now built a complete, albeit miniature, core of a deep learning framework. What's left for next week are peripheral utilities that make the system more adaptive and easy to use in various scenarios (CV, Audio, etc.).
+
+For now, let's put your framework to the test with two classic machine learning tasks that don't require complex data loaders or pre-processing pipelines.
+
+---
+
+## 1. Predict Real Estate Value (Regression)
+
+**Task**: Predict the price of a house based on several features. This is a typical **regression** problem, where the goal is to predict a continuous output value.
+
+Please complete the `tests/week3/estate_value_predict/main.ipynb`.
+
+---
+
+## 2. Classify Handwritten Digits (Classification)
+
+**Task**: Identify the digit (0 through 9) from a 28x28 pixel image of a handwritten number. This is a **classification** problem, where the goal is to predict a discrete category.
+
+Please complete the `tests/week3/mnist/main.ipynb`.
