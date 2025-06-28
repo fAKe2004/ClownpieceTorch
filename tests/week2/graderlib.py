@@ -13,7 +13,7 @@ from torch import Tensor as TensorT
 
 from typing import Tuple, Any, Iterable
 import torch.multiprocessing as mp
-from clownpiece import wrap_tuple
+from clownpiece.utils_ import wrap_tuple
 
 # global vars
 total_score: int = 0

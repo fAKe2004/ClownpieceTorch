@@ -197,4 +197,4 @@ cython_debug/
 .vscode/
 
 test.py
-tests/week3/mnist/data/MNIST/raw
+tests/**/data/

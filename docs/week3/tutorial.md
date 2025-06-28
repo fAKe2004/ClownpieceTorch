@@ -1166,3 +1166,68 @@ Please complete the `tests/week3/estate_value_predict/main.ipynb`.
 **Task**: Identify the digit (0 through 9) from a 28x28 pixel image of a handwritten number. This is a **classification** problem, where the goal is to predict a discrete category.
 
 Please complete the `tests/week3/mnist/main.ipynb`.
+
+---
+
+# Optional Challange: Add Support for Conv2d
+
+~~**Due to TAs' design failure**~~ due to incomplete feature of our tensor library and autograd engine, we are unable to support a important class of Module: **Convolution**, which is dominant in previous era of DL (right before transformers).
+
+Your task is to add support for `Conv2D` in our system. This involves adding basic operations at C++ backend, binding in Python, Functions in autograd, and finally, a new `Conv2D` in module system.
+
+For what `Conv2D` is, refer to [this link](https://docs.pytorch.org/docs/stable/generated/torch.nn.Conv2d.html).
+
+These two basic operations may be of your interests:
+
+- **Unfold**: also called `im2col`, which extends 2D image into `(num_patches, patch_dim)` given a specific kernel size. After this operation, Conv2D can be done by simply matmul with kernel. [link](https://pytorch.org/docs/stable/generated/torch.nn.Fold.html)
+
+```python
+  def Conv2D(images, kernel_size, kernel_weight):
+    unfolded = unfold(images, kernel_size)
+    return matmul(unfolded, kernel_weight)
+```
+
+- **Fold**: also called `col2im`, which reduces the results from unfold, summation over overlapped area, and average them. (but not strictly the reverse of unfold). You need this function for backward of unfold. [link](https://docs.pytorch.org/docs/stable/generated/torch.nn.Unfold.html)
+
+
+Besides, **Padding** may also be necessary.
+
+### Your Task:
+
+- Implement a `Conv2d` of the simplist case: `stride=1`, `padding='same'`, `dilation=1`,`groups=1`.
+  - naive solution of "for loops kernel" in python is not allowed
+  - naive solution of "for loops kernel" in C++ is allowed, but only partial credit
+  - efficient solution using "unfold" is encouraged.
+
+```python
+class Conv2D(Module):
+
+  def __init__(self, in_channels, out_channels, kernel_size_height, kernel_size_width):
+    pass
+
+  def forward(self, x):
+    pass
+```
+
+- Include a section in your report to clearly explain:
+  - How do you implement `Conv2d`?
+
+  - What's the exact semantic of `unfold` and it's backward? How can it be utilized in `Conv2d`?
+    - TA fAKe was occupied with 仕事, and cannot understand by himself in limited free time
+    - Even if you fail to give a working `Conv2D` implement, by explaining its principle clearly, you will receive partial credit.
+
+---
+
+
+## Submit Your Homework
+
+First, make sure that you passed the `grade_all.py`.
+
+Then, you should write a detailed **report** under `docs/week3`, to describe the challenges you have encountered, how did you solved them, and what are the takeaways. (Also, attach the grader summary part from output of `grade_all.py`). This report accounts for part of your score.
+
+There is no optional challenge for week2, but if you complete week1'
+s OC, you may include it in this week's report.
+
+Finally zip the entire project folder into lab-week3.zip, and submit to canvas.
+
+Make sure that the TAs can run the `grade_all.py` and find your report from your submission.
