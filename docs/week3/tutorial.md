@@ -1114,10 +1114,15 @@ $$
 
 This equation simplifies to $-\log(p_k)$, where $p_k$ is the predicted probability of the correct class $k$. Minimizing this loss is equivalent to maximizing the log-probability of the correct class.
 
-> **Numerical Stability**: In common practice, `CrossEntropyLoss` is combined with a `LogSoftmax` function. This operation is more numerically stable than applying a `Softmax` and then a `log` separately. User only feed the loss function with logits (unnormalized output from classification model) and correct label. 
-
-> Note that: **logits is not predicted probability -- the softmax(logits) is**.
-
+> **Numerical Stability**: In common practice, `CrossEntropyLoss` is combined with a `LogSoftmax` function. This operation is more numerically stable than applying a `Softmax` and then a `log` separately by avoiding `log(0)`. User only feed logits (unnormalized output from classification model) and correct label to cross-entropy. 
+> A workaround in our case is to replace:
+> ```python
+> log_probs = logits.softmax(dim=-1).log()
+> ```
+> with
+> ```python
+> log_probs = logits - logits.exp().sum(dim=-1, keepdims=True).log()
+> ```
 
 
 Please complete:

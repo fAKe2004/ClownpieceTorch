@@ -1,7 +1,9 @@
-from typing import Callable, List, Any
+from typing import Callable, List, Any, Union
 import os
 from PIL import Image
 import numpy as np
+
+from clownpiece.tensor import Tensor
 
 class Dataset():
   
@@ -60,8 +62,8 @@ class ImageDataset(Dataset):
   A dataset that reads images from a directory with subdirectories.
   Subdirectory name is used as label.
   """
-  
-  data: List[np.ndarray]
+  file_path: str
+  data: List[Union[np.ndarray, Tensor]]
   labels: List[int]
   transform: Callable
   class_to_idx: dict[str, int]
@@ -96,7 +98,7 @@ class ImageDataset(Dataset):
               self.labels.append(self.class_to_idx[class_name])
             except Exception as e:
               print(f"Error loading image {file_path}: {e}")
-              
+    
   def __getitem__(self, index):
     return self.data[index], self.labels[index]
   

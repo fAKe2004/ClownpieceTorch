@@ -24,6 +24,8 @@ class Optimizer():
 
     for param_group in param_groups:
         self.add_param_group(param_group)
+        
+    self._assign_param_id()
 
   def add_param_group(self, param_group: Dict[str, Any]):
     """
@@ -55,34 +57,64 @@ class Optimizer():
           zeros_(param.grad)
       
   
+  def _assign_param_id(self):
+    idx = 0
+    for param_group in self.param_groups:
+      params = param_group.get('params', [])
+      for param in params:
+        if not isinstance(param, Parameter) or hasattr(param, 'param_id'):
+          continue
+        param.param_id = idx
+        idx += 1
+  
 class SGD(Optimizer):
   """
-  Stochastic Gradient Descent optimizer.
+  Stochastic Gradient Descent optimizer with momentum and weight decay.
   """
-  
-  def __init__(self, params, lr, momentum=0, dampening=0, weight_decay=0, nesterov=False):
+  def __init__(self, params, lr: float, momentum: float = 0.0, damping: float = 0.0, weight_decay: float = 0.0):
     if lr < 0.0:
         raise ValueError(f"Invalid learning rate: {lr}")
     if momentum < 0.0:
         raise ValueError(f"Invalid momentum value: {momentum}")
+    if damping < 0.0:
+        raise ValueError(f"Invalid damping value: {damping}")
     if weight_decay < 0.0:
         raise ValueError(f"Invalid weight_decay value: {weight_decay}")
-
-    defaults = dict(lr=lr, momentum=momentum, dampening=dampening,
-                    weight_decay=weight_decay, nesterov=nesterov)
-    if nesterov and (momentum <= 0 or dampening != 0):
-        raise ValueError("Nesterov momentum requires a momentum and zero dampening")
+    # Store hyperparameters
+    defaults = dict(lr=lr, momentum=momentum, damping=damping, weight_decay=weight_decay)
     super().__init__(params, defaults)
 
   def step(self):
+    """
+    Performs a single optimization step:
+      1. Applies L2 weight decay: grad = grad + weight_decay * p
+      2. Updates momentum buffer: buf = momentum * buf + grad
+      3. Updates parameter: p = p - lr * buf
+    """
     with no_grad():
       for group in self.param_groups:
         lr = group['lr']
-        for param in group["params"]:
-          if param.grad is None:
+        momentum = group['momentum']
+        damping = group['damping']
+        weight_decay = group['weight_decay']
+        for p in group['params']:
+          if p.grad is None:
             continue
-          # SGD update rule
-          param.copy_(param - lr * param.grad)
+          grad = p.grad
+          # L2 regularization
+          if weight_decay != 0:
+            grad = grad + weight_decay * p
+          # retrieve or init momentum buffer
+          state = self.state.get(p.param_id)
+          if state is None:
+            buf = Tensor.zeros_like(p)
+            state = {'momentum_buffer': buf}
+            self.state[p.param_id] = state
+          else:
+            buf = state['momentum_buffer']
+          # update buffer and parameters
+          buf.copy_(momentum * buf + (1 - damping) * grad)
+          p.copy_(p - lr * buf)
 
 class Adam(Optimizer):
   """
@@ -108,13 +140,17 @@ class Adam(Optimizer):
       lr = group['lr']
       beta1, beta2 = group['betas']
       eps = group['eps']
+      weight_decay = group['weight_decay']
       
       for p in group['params']:
         if p.grad is None:
           continue
         grad = p.grad
         
-        state = self.state.get(p)
+        if weight_decay != 0:
+          grad = grad + weight_decay * p
+        
+        state = self.state.get(p.param_id)
         
         # State initialization
         if state is None:
@@ -125,7 +161,7 @@ class Adam(Optimizer):
           state['exp_avg_sq'] = Tensor.zeros_like(p)
           # Step
           state['step'] = 0
-          self.state[p] = state
+          self.state[p.param_id] = state
         
         exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
         state['step'] += 1

@@ -1,4 +1,4 @@
-from clownpiece.tensor import stack
+from clownpiece.tensor import stack, Tensor
 from clownpiece.utils_ import ceil_div
 
 import random
@@ -21,9 +21,18 @@ class DefaultSampler:
 def default_collate_fn(batch):
   is_tuple = isinstance(batch[0], (tuple, list))
   if not is_tuple:
-    return stack(batch)
-  else:
-    return tuple(stack([item[i] for item in batch]) for i in range(len(batch[0])))
+    batch = [(b,) for b in batch]
+
+  stacked_batch = []
+  for i in range(len(batch[0])):
+    if not isinstance(batch[0][i], Tensor):
+      stacked_batch.append(stack([Tensor(b[i], requires_grad=False) for b in batch]))
+    else:
+      stacked_batch.append(stack([b[i] for b in batch]))
+    
+  if not is_tuple:
+    stacked_batch = stacked_batch[0]
+  return stacked_batch
 
 class Dataloader():
   

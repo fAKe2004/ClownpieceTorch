@@ -2,6 +2,7 @@
 
 from clownpiece.nn.module import Module
 from clownpiece import Tensor
+import math
 
 class MSELoss(Module):
   def __init__(self):
@@ -14,6 +15,7 @@ class MSELoss(Module):
     return (diff.pow(2)).reshape(-1).mean(-1)
   
 class CrossEntropyLoss(Module):
+
     def __init__(self):
       super().__init__()
 
@@ -24,11 +26,15 @@ class CrossEntropyLoss(Module):
       logits = logits.reshape((-1, logits.shape[-1]))
       target = target.reshape(-1)
       
-      log_probs = logits.softmax(dim=-1).log()
-      selected = []
+      # probs = logits.softmax(dim=-1).clamp(self.eps, 1)
+      # log_probs = probs.log()
+      log_probs = logits - logits.exp().sum(dim=-1, keepdims=True).log()
+      
+      selected_list = []
       for i in range(logits.shape[0]):
           index = round(target[i].item())
-          selected += [log_probs[i, index]]
+          selected = log_probs[i, index]
+          selected_list += [selected]
           
-      return -sum(selected) / logits.shape[0]
+      return -sum(selected_list) / logits.shape[0]
   

@@ -45,27 +45,11 @@ class LambdaLR(LRScheduler):
     """
     
     def __init__(self, optimizer: Optimizer, lr_lambda, last_epoch=-1):
-        self.lr_lambda = lr_lambda
         super().__init__(optimizer, last_epoch)
+        self.lr_lambda = lr_lambda
 
     def get_lr(self):
         return [base_lr * self.lr_lambda(self.last_epoch) for base_lr in self.base_lrs]
-
-class StepLR(LRScheduler):
-    """
-    Step learning rate scheduler.
-    Decreases the learning rate by a factor every `step_size` epochs.
-    """
-    
-    def __init__(self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch=-1):
-        self.step_size = step_size
-        self.gamma = gamma
-        super().__init__(optimizer, last_epoch)
-
-    def get_lr(self):
-        if self.last_epoch == 0 or self.last_epoch % self.step_size != 0:
-            return [group['lr'] for group in self.optimizer.param_groups]
-        return [group['lr'] * self.gamma for group in self.optimizer.param_groups]
     
 class ExponentialLR(LRScheduler):
     """
@@ -78,6 +62,21 @@ class ExponentialLR(LRScheduler):
         super().__init__(optimizer, last_epoch)
 
     def get_lr(self):
-        if self.last_epoch == 0:
-            return self.base_lrs
-        return [group['lr'] * self.gamma for group in self.optimizer.param_groups]
+        steps = self.last_epoch
+        return [base_lr * (self.gamma ** steps) for base_lr in self.base_lrs]
+        
+class StepLR(LRScheduler):
+    """
+    Step learning rate scheduler.
+    Decreases the learning rate by a factor every `step_size` epochs.
+    """
+    
+    def __init__(self, optimizer: Optimizer, step_size: int, gamma: float = 0.1, last_epoch=-1):
+        self.step_size = step_size
+        self.gamma = gamma
+        super().__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        steps = self.last_epoch // self.step_size
+        return [base_lr * (self.gamma ** steps) for base_lr in self.base_lrs]
+    
