@@ -597,7 +597,7 @@ In this step, you will implement several standard initialization schemes in `clo
 
 **Constant:**
 ```python
-def consants_(tensor: Tensor, value: float):
+def constants_(tensor: Tensor, value: float):
   pass
 
 def zeros_(tensor: Tensor):

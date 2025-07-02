@@ -60,7 +60,7 @@ def _init_with_generator(
   for i in range(len(tensor)):
     tensor._impl.change_data_at(i, generator())
   
-def consants_(tensor: Tensor, value: float):
+def constants_(tensor: Tensor, value: float):
   _init_with_generator(tensor, lambda: value)
     
 def zeros_(tensor: Tensor):
