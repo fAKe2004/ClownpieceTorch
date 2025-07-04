@@ -184,6 +184,47 @@ PYBIND11_MODULE(tensor_impl, m) {
         }, "Get a tensor using a single index")
         .def("__getitem__", [](const at::Tensor &self, py::object idx) {
             // std::cout<<"Getting tensor with index object: "<<py::str(idx)<<std::endl;
+            
+            // Check for mixed indexing case
+            if (py::isinstance<py::tuple>(idx)) {
+                auto t = idx.cast<py::tuple>();
+                bool has_int = false, has_slice = false;
+                
+                for (size_t i = 0; i < t.size(); ++i) {
+                    auto item = t[i];
+                    if (py::isinstance<py::int_>(item)) has_int = true;
+                    else if (py::isinstance<py::slice>(item) || py::isinstance<py::tuple>(item)) has_slice = true;
+                }
+                
+                if (has_int && has_slice) {
+                    // Mixed indexing case: apply indices sequentially
+                    at::Tensor result = self;
+                    
+                    for (size_t i = 0; i < t.size(); ++i) {
+                        auto item = t[i];
+                        if (py::isinstance<py::int_>(item)) {
+                            int index = item.cast<int>();
+                            result = result[index];  // This will reduce dimension
+                        } else if (py::isinstance<py::slice>(item)) {
+                            slice_t slice = py_slice_to_slice_t(item.cast<py::slice>(), result.size(0));
+                            result = result[slice];  // This preserves dimension
+                        } else if (py::isinstance<py::tuple>(item)) {
+                            auto subt = item.cast<py::tuple>();
+                            if (subt.size() == 2) {
+                                slice_t slice(subt[0].cast<int>(), subt[1].cast<int>());
+                                result = result[slice];
+                            } else {
+                                throw std::runtime_error("Invalid tuple size for slice");
+                            }
+                        } else {
+                            throw std::runtime_error("Invalid index type in tuple");
+                        }
+                    }
+                    return result;
+                }
+            }
+            
+            // Normal case: use parse_index
             auto slices = parse_index(self, idx);
             auto p = self[slices];
             // std::cout<<"new_shape=";
@@ -577,7 +618,8 @@ std::vector<slice_t> parse_index(const Tensor& self, const py::object &idx) {
 
     if (py::isinstance<py::tuple>(idx)) {
         auto t = idx.cast<py::tuple>();
-        size_t nd = self.dim();
+        
+        // For pure slice/int cases (non-mixed indexing)
         for (size_t i = 0; i < t.size(); ++i) {
             auto item = t[i];
             if (py::isinstance<py::int_>(item)) {

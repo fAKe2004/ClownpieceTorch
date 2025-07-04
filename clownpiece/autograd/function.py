@@ -430,12 +430,13 @@ def reduce_forward_wrapper(forward_impl):
     def forward(ctx: Context, input: Tensor, dim: Union[int, List[int]], keepdims: bool = False, *args, **kwargs):
         ctx.input_shape = input.shape
         if dim is None:
-            ctx.dim = list(range(input.dim()))
+            dim = list(range(input.dim()))
         elif isinstance(dim, int):
-            ctx.dim = [dim]
-        else:
-            ctx.dim = list(dim)
-        ctx.dim.sort(reverse=True)
+            dim = [dim]
+        ctx.dim = list(
+            [d if d >= 0 else d + input.dim() for d in dim]
+        )
+        ctx.dim.sort()
         ctx.keepdims = keepdims
         
         output = forward_impl(ctx, input, dim, keepdims, *args, **kwargs)
@@ -447,7 +448,7 @@ def reduce_forward_wrapper(forward_impl):
 class Sum(Function):
     @staticmethod
     @reduce_forward_wrapper
-    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int], None], keepdims: bool = False):
+    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int], None], keepdims: bool):
         return input.sum(dim, keepdims=keepdims)
     
     @staticmethod
@@ -463,7 +464,7 @@ class Sum(Function):
 class Max(Function):
     @staticmethod
     @reduce_forward_wrapper
-    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool = False):
+    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool):
         max_values, max_indices = input.max(dim, keepdims=keepdims)
         ctx.save_for_backward(max_indices)
         return max_values, max_indices
