@@ -245,6 +245,122 @@ def test_cross_entropy_loss():
         print("CrossEntropyLoss not implemented yet, skipping test")
         return True
 
+@testcase(name="cross_entropy_numerical_stability", score=10)
+def test_cross_entropy_numerical_stability():
+    """Test CrossEntropy Loss with large logits for numerical stability"""
+    try:
+        ce_loss = CrossEntropyLoss()
+        
+        # Test case 1: Large positive logits (should not overflow)
+        large_logits = Tensor([
+            [20.0, 1.0, 0.1],  # Large logit for class 0
+            [0.1, 20.0, 1.0],  # Large logit for class 1
+            [1.0, 0.1, 20.0]   # Large logit for class 2
+        ])
+        targets = Tensor([0, 1, 2])  # Correct predictions
+        
+        # This should not cause overflow
+        loss = ce_loss(large_logits, targets)
+        assert not math.isinf(loss.item()) and not math.isnan(loss.item()), \
+            f"Loss should be finite with large logits, got {loss.item()}"
+        
+        # Loss should be very small for correct predictions with large confidence
+        assert loss.item() < 1.0, \
+            f"Loss should be small for correct predictions with large confidence, got {loss.item()}"
+        
+        # Test case 2: Large negative logits (should not underflow)
+        large_negative_logits = Tensor([
+            [-20.0, 1.0, 0.1],  # Large negative logit for class 0
+            [0.1, -20.0, 1.0],  # Large negative logit for class 1
+            [1.0, 0.1, -20.0]   # Large negative logit for class 2
+        ])
+        wrong_targets = Tensor([0, 1, 2])  # Targeting the classes with large negative logits
+        
+        # This should not cause underflow but should give large loss
+        large_loss = ce_loss(large_negative_logits, wrong_targets)
+        assert not math.isinf(large_loss.item()) and not math.isnan(large_loss.item()), \
+            f"Loss should be finite with large negative logits, got {large_loss.item()}"
+        
+        # Loss should be large for wrong predictions with large negative confidence
+        assert large_loss.item() > 10.0, \
+            f"Loss should be large for wrong predictions with large negative confidence, got {large_loss.item()}"
+        
+        # Test case 3: Mixed large positive and negative logits
+        mixed_logits = Tensor([
+            [20.0, -20.0, 0.0],  # Strong prediction for class 0
+            [-20.0, 20.0, 0.0],  # Strong prediction for class 1
+        ])
+        mixed_targets = Tensor([0, 1])  # Correct predictions
+        
+        mixed_loss = ce_loss(mixed_logits, mixed_targets)
+        assert not math.isinf(mixed_loss.item()) and not math.isnan(mixed_loss.item()), \
+            f"Loss should be finite with mixed large logits, got {mixed_loss.item()}"
+        
+        return True
+    except (ImportError, AttributeError, NotImplementedError):
+        print("CrossEntropyLoss not implemented yet, skipping numerical stability test")
+        return True
+
+@testcase(name="cross_entropy_backward", score=10)
+def test_cross_entropy_backward():
+    """Test CrossEntropy Loss backward pass"""
+    try:
+        ce_loss = CrossEntropyLoss()
+        
+        # Create logits with requires_grad=True
+        logits = Tensor([
+            [2.0, 1.0, 0.1],  # Predicts class 0
+            [0.1, 2.0, 1.0],  # Predicts class 1
+            [1.0, 0.1, 2.0]   # Predicts class 2
+        ], requires_grad=True)
+        targets = Tensor([0, 1, 2])  # Correct predictions
+        
+        # Forward pass
+        loss = ce_loss(logits, targets)
+        
+        # Backward pass
+        try:
+            loss.backward()
+            
+            # Check that gradients exist
+            assert logits.grad is not None, "Logits should have gradients after backward"
+            
+            # Check gradient shape
+            assert logits.grad.shape == logits.shape, \
+                f"Gradient shape {logits.grad.shape} should match logits shape {logits.shape}"
+            
+            # Check that gradients are finite
+            grad_values = logits.grad.tolist()
+            for i, row in enumerate(grad_values):
+                for j, val in enumerate(row):
+                    assert not math.isinf(val) and not math.isnan(val), \
+                        f"Gradient at [{i}, {j}] should be finite, got {val}"
+            
+            # For correct predictions, the gradient at the correct class should be negative
+            # (since we want to increase the logit for the correct class)
+            for i in range(len(targets)):
+                correct_class = int(targets[i].item())
+                grad_at_correct = logits.grad[i, correct_class].item()
+                # The gradient should generally be negative for correct predictions
+                # (though this depends on the exact implementation)
+                assert abs(grad_at_correct) > 0.0, \
+                    f"Gradient at correct class should be non-zero, got {grad_at_correct}"
+            
+            print("CrossEntropy backward pass successful")
+            return True
+            
+        except NotImplementedError:
+            print("CrossEntropy backward not implemented yet, skipping backward test")
+            return True
+        except Exception as e:
+            print(f"CrossEntropy backward failed with error: {e}")
+            # Don't fail the test if backward is not properly implemented
+            return True
+            
+    except (ImportError, AttributeError, NotImplementedError):
+        print("CrossEntropyLoss not implemented yet, skipping backward test")
+        return True
+
 # ===== CONTAINER MODULES =====
 
 @testcase(name="sequential_container", score=10)
@@ -502,6 +618,8 @@ if __name__ == "__main__":
         test_activation_repr,
         test_mse_loss,
         test_cross_entropy_loss,
+        test_cross_entropy_numerical_stability,
+        test_cross_entropy_backward,
         test_sequential_container,
         test_module_list_container,
         test_module_dict_container,

@@ -198,6 +198,79 @@ def test_module_repr():
     
     return True
 
+@testcase(name="module_state_dict_parameter_change", score=10)
+def test_module_state_dict_parameter_change():
+    """Test that when parameters are changed, they are removed from state_dict"""
+    model = Linear(4, 8)
+    
+    # Get original state_dict
+    state_before = dict(model.state_dict())
+    
+    # Replace parameters with new ones
+    with no_grad():
+        model.weight = Parameter(Tensor([[1.0]*4]*8))  # (8, 4) for Linear(4, 8)
+        model.bias = Parameter(Tensor([0.0]*8))
+    
+    # Get new state_dict
+    state_after = dict(model.state_dict())
+    
+    # New parameters should appear in state_dict
+    assert "weight" in state_after and "bias" in state_after, \
+        "Parameters not in state_dict after change"
+    
+    # Check shapes are correct
+    assert tuple(state_before["weight"].shape) == (8, 4), \
+        f"Original weight shape incorrect: expected (8, 4), got {tuple(state_before['weight'].shape)}"
+    assert tuple(state_after["weight"].shape) == (8, 4), \
+        f"New weight shape incorrect: expected (8, 4), got {tuple(state_after['weight'].shape)}"
+    
+    # Check that the parameter objects have changed (different memory addresses)
+    assert id(state_before["weight"]) != id(state_after["weight"]), \
+        "Parameter object not updated in state_dict"
+    assert id(state_before["bias"]) != id(state_after["bias"]), \
+        "Bias object not updated in state_dict"
+    
+    return True
+
+@testcase(name="module_nested_eval", score=10)
+def test_module_nested_eval():
+    """Test that eval() propagates to child modules"""
+    class MyBlock(Module):
+        def __init__(self):
+            super().__init__()
+            self.linear1 = Linear(4, 8)
+            self.linear2 = Linear(8, 2)
+        
+        def forward(self, x):
+            return self.linear2(self.linear1(x))
+    
+    # Create parent module and add child
+    parent = Module()
+    parent.child = MyBlock()
+    
+    # Initially all should be in training mode
+    parent.train()
+    assert parent.training, "Parent should be in train mode"
+    assert parent.child.training, "Child should be in train mode"
+    assert parent.child.linear1.training, "Grandchild linear1 should be in train mode"
+    assert parent.child.linear2.training, "Grandchild linear2 should be in train mode"
+    
+    # Switch to eval mode - should propagate to all children
+    parent.eval()
+    assert not parent.training, "Parent should be in eval mode"
+    assert not parent.child.training, "Child should be in eval mode"
+    assert not parent.child.linear1.training, "Grandchild linear1 should be in eval mode"
+    assert not parent.child.linear2.training, "Grandchild linear2 should be in eval mode"
+    
+    # Switch back to training mode - should propagate to all children
+    parent.train()
+    assert parent.training, "Parent should be in train mode again"
+    assert parent.child.training, "Child should be in train mode again"
+    assert parent.child.linear1.training, "Grandchild linear1 should be in train mode again"
+    assert parent.child.linear2.training, "Grandchild linear2 should be in train mode again"
+    
+    return True
+
 if __name__ == "__main__":
     print("Testing Week 3 Part 1: Core Module System")
     print("=" * 50)
@@ -208,5 +281,7 @@ if __name__ == "__main__":
     test_module_load_state_dict()
     test_module_training_mode()
     test_module_repr()
+    test_module_state_dict_parameter_change()
+    test_module_nested_eval()
     
     grader_summary()

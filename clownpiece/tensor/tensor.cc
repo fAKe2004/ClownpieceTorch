@@ -452,6 +452,7 @@ namespace at {
   */
 
   Tensor Tensor::operator[](const vec<slice_t>& slices) const {
+    // std::cout<<"vec slice"<<std::endl;
     if (slices.size() == 0 || (int)slices.size() > dim_)
     throw std::runtime_error("Tensor: slices are empty or size exceeds dim");
     
@@ -472,33 +473,14 @@ namespace at {
   }
 
   Tensor Tensor::operator[](slice_t slice) const {
+    // std::cout<<"single slice"<<std::endl;
     if (!dim_)
       throw std::runtime_error("Tensor: slicing tensor with dim = 0");
     slice = normalize_slice(slice, shape_[0]);
     shape_t new_shape = shape_;
     new_shape[0] = slice.second - slice.first;
     int new_offset = offset_ + slice.first * stride_[0];
-    // std::cout<<"new_shape="<<new_shape<<std::endl;
-    // std::cout<<"stride_="<<stride_<<std::endl;
-    // std::cout<<"new_offset="<<new_offset<<std::endl;
-    // std::cout<<"storage.size="<<storage_.size<<std::endl;
-    // for(int i = 0; i < storage_.size; i++) {
-    //   std::cout<<storage_[i]<<" ";
-    // }
-    // std::cout<<std::endl;
     auto ret = Tensor(new_shape, stride_, new_offset, storage_);
-    // std::cout<<"Tensor::operator[]: new shape="<<ret.get_shape()<<std::endl;
-    // for (const auto& dim : ret.get_shape()) {
-    //     std::cout<<dim<<" ";
-    // }
-    // std::cout<<std::endl;
-    // std::cout<<"Tensor::operator[]: new offset="<<ret.get_offset()<<std::endl;
-    // std::cout<<"Tensor::operator[]: new storage size="<<ret.get_storage().size<<std::endl;
-    // std::cout<<"Tensor::operator[]: new storage data=";
-    // for (int i = 0; i < ret.get_storage().size; i++) {
-    //   std::cout<<ret.get_storage()[i]<<" ";
-    // }
-    // std::cout<<std::endl;
     return ret;
   }
 

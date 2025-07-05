@@ -766,9 +766,14 @@ class Linear(Module):
         # init.kaiming_uniform_(self.weight, a = math.sqrt(5))
 ```
 
-Run `grade_part3.py` to test your code. For random method, we ran each for 1000 times on 10x20 tensors, and cacluate the CDF of all elements combined, then compare with the target CDF under L2 norm with clipping at $3\sigma$.
+Run `grade_part3.py` to test your code. For advanced initialization methods (Xavier and Kaiming), we run each test 1000 times on 10×20 tensors, collecting all 200,000 data points to perform comprehensive statistical validation. We then directly compare the sample mean and variance/standard deviation against theoretical expected values using appropriate tolerance thresholds.
 
-It's very unlikely that your program will fail by chance if it's in fact correctly. If so, try again, if with high probability it passes, then it's ok.
+The statistical validation includes:
+- **Mean validation**: Absolute deviation should be less than 0.1
+- **Variance/Standard deviation validation**: Relative error should be less than 30-40%
+- **Range validation**: For uniform distributions, all values should be within expected bounds
+
+With 200,000 data points per test, the statistical estimates are highly reliable. It's very unlikely that your program will fail by chance if implemented correctly. The large sample size ensures robust detection of implementation errors while maintaining stability against random fluctuations.
 
 ---
 

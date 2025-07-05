@@ -57,6 +57,9 @@ def main():
     print("Module System Implementation Tests")
     print(f"Working directory: {os.getcwd()}")
     
+    # Get the directory where this script is located
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    
     # Test parts in order
     test_parts = [
         ("PART 1: Core Module System", "grade_part1.py"),
@@ -69,11 +72,13 @@ def main():
     
     # Run each test part
     for part_name, part_file in test_parts:
-        if not os.path.exists(part_file):
-            print(f"✗ {part_name} - FILE NOT FOUND: {part_file}")
+        # Use absolute path relative to script directory
+        full_part_path = os.path.join(script_dir, part_file)
+        if not os.path.exists(full_part_path):
+            print(f"✗ {part_name} - FILE NOT FOUND: {full_part_path}")
             results[part_name] = False
         else:
-            results[part_name] = run_test_part(part_name, part_file)
+            results[part_name] = run_test_part(part_name, full_part_path)
     
     # Print summary
     print(f"\n{'='*60}")

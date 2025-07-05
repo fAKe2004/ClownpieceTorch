@@ -494,7 +494,7 @@ def tensor_op(op_name, Function_name):
       
       module = importlib.import_module("clownpiece.autograd.function")
       FunctionClass = getattr(module, Function_name)
-
+    #   print("args:", args, "kwargs:", kwargs, "FunctionClass:", FunctionClass)
       return function(*args, **kwargs, FunctionClass=FunctionClass)
     
     return wrapped_function
@@ -743,6 +743,7 @@ class Tensor(TensorBase):
   
   @tensor_op('mean', 'Mean')
   def mean(self, dim: int, keepdims: bool = False, FunctionClass=None) -> "Tensor":
+    #   print("mean called with dim=", dim, "keepdims=", keepdims)
       return FunctionClass().apply(self, dim, keepdims)
     
   @tensor_op('var', 'Var')

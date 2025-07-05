@@ -680,8 +680,21 @@ class Broadcast(Function):
 class Mean(Function):
     @staticmethod
     @reduce_forward_wrapper
-    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool):
-        return input.mean(dim, keepdims=keepdims)
+    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int]], keepdims: bool):
+        # reduce_forward_wrapper converts int to list, but base mean expects int
+        if isinstance(dim, list):
+            if len(dim) == 1:
+                # Single dimension case - extract the int from the list
+                return input.mean(dim[0], keepdims=keepdims)
+            else:
+                # Multiple dimensions case - reduce sequentially
+                result = input
+                # Sort dimensions in descending order to maintain correct indices
+                for d in sorted(dim, reverse=True):
+                    result = result.mean(d, keepdims=keepdims)
+                return result
+        else:
+            return input.mean(dim, keepdims=keepdims)
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
@@ -696,10 +709,20 @@ class Mean(Function):
 class Var(Function):
     @staticmethod
     @reduce_forward_wrapper
-    def forward(ctx: Context, input: Tensor, dim: int, keepdims: bool, unbiased: bool):
+    def forward(ctx: Context, input: Tensor, dim: Union[int, List[int]], keepdims: bool, unbiased: bool):
         ctx.input = input
         ctx.unbiased = unbiased
-        return input.var(dim, keepdims=keepdims, unbiased=unbiased)
+        # reduce_forward_wrapper converts int to list, but base var expects int
+        if isinstance(dim, list):
+            if len(dim) == 1:
+                # Single dimension case - extract the int from the list
+                return input.var(dim[0], keepdims=keepdims, unbiased=unbiased)
+            else:
+                # Multiple dimensions case - this is more complex for variance
+                # For now, just support single dimension
+                raise NotImplementedError("Multi-dimensional variance not implemented")
+        else:
+            return input.var(dim, keepdims=keepdims, unbiased=unbiased)
     
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor):
