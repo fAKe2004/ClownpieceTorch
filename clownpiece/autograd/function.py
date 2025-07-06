@@ -5,7 +5,9 @@
 from typing import List, Union
 import copy
 
-from clownpiece.tensor import Tensor, zeros, zeros_like
+from clownpiece.tensor import Tensor
+zeros = Tensor.zeros
+zeros_like = Tensor.zeros_like
 from clownpiece.autograd.autograd import Node, Edge
 from clownpiece.autograd.no_grad import no_grad
 from clownpiece.utils_ import wrap_tuple

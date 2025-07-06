@@ -1,6 +1,8 @@
 from typing import Dict, Iterable, List, Optional, Union, Any
 
-from clownpiece.tensor import Tensor, ones_like, zeros_like
+from clownpiece.tensor import Tensor
+zeros_like = Tensor.zeros_like
+ones_like = Tensor.ones_like
 from clownpiece.utils_ import wrap_tuple
 
 """
