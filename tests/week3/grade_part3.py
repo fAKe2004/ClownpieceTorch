@@ -85,12 +85,19 @@ def test_init_normal():
 @testcase(name="init_xavier_uniform", score=10)
 def test_init_xavier_uniform():
     """Test Xavier uniform initialization"""
-    # Test with Linear layer dimensions
+    # Test with 10x20 tensors as mentioned in documentation
     in_features, out_features = 10, 20
-    tensor = Tensor.empty((out_features, in_features))
     
-    gain = 1.0
-    init.xavier_uniform_(tensor, gain)
+    # Run test 1000 times as mentioned in documentation
+    num_tests = 1000
+    all_values = []
+    
+    for _ in range(num_tests):
+        tensor = Tensor.empty((out_features, in_features))
+        gain = 1.0
+        init.xavier_uniform_(tensor, gain)
+        arr = np.array(tensor.tolist())
+        all_values.extend(arr.flatten())
     
     # Check expected variance
     fan_in = in_features
@@ -98,57 +105,77 @@ def test_init_xavier_uniform():
     expected_std = gain * math.sqrt(2.0 / (fan_in + fan_out))
     expected_bound = expected_std * math.sqrt(3.0)  # For uniform distribution
     
-    arr = np.array(tensor.tolist())
-    assert np.all(np.abs(arr) <= expected_bound * 1.1), \
+    all_values = np.array(all_values)
+    
+    # Check that all values are within bounds
+    assert np.all(np.abs(all_values) <= expected_bound * 1.1), \
         f"xavier_uniform_ values outside expected bound ±{expected_bound}"
     
-    # Check approximate variance for large tensor
-    if np.prod(tensor.shape) > 100:
-        actual_var = np.var(arr)
-        expected_var = expected_std ** 2
-        assert abs(actual_var - expected_var) < expected_var * 0.3, \
-            f"xavier_uniform_ variance {actual_var} too far from expected {expected_var}"
+    # Check approximate variance across all runs
+    actual_var = np.var(all_values)
+    expected_var = expected_std ** 2
+    assert abs(actual_var - expected_var) < expected_var * 0.3, \
+        f"xavier_uniform_ variance {actual_var} too far from expected {expected_var}"
+    
+    # Check that mean is close to 0
+    actual_mean = np.mean(all_values)
+    assert abs(actual_mean) < 0.1, \
+        f"xavier_uniform_ mean {actual_mean} should be close to 0"
     
     return True
 
 @testcase(name="init_xavier_normal", score=10)
 def test_init_xavier_normal():
     """Test Xavier normal initialization"""
-    # Test with Linear layer dimensions
+    # Test with 10x20 tensors as mentioned in documentation
     in_features, out_features = 10, 20
-    tensor = Tensor.empty((out_features, in_features))
     
-    gain = 1.0
-    init.xavier_normal_(tensor, gain)
+    # Run test 1000 times as mentioned in documentation
+    num_tests = 1000
+    all_values = []
+    
+    for _ in range(num_tests):
+        tensor = Tensor.empty((out_features, in_features))
+        gain = 1.0
+        init.xavier_normal_(tensor, gain)
+        arr = np.array(tensor.tolist())
+        all_values.extend(arr.flatten())
     
     # Check expected standard deviation
     fan_in = in_features
     fan_out = out_features
     expected_std = gain * math.sqrt(2.0 / (fan_in + fan_out))
     
-    # For large tensor, check approximate statistics
-    if np.prod(tensor.shape) > 100:
-        arr = np.array(tensor.tolist())
-        actual_std = np.std(arr)
-        assert abs(actual_std - expected_std) < expected_std * 0.3, \
-            f"xavier_normal_ std {actual_std} too far from expected {expected_std}"
-        
-        # Check that mean is close to 0
-        actual_mean = np.mean(arr)
-        assert abs(actual_mean) < 0.1, \
-            f"xavier_normal_ mean {actual_mean} should be close to 0"
+    all_values = np.array(all_values)
+    
+    # Check approximate statistics across all runs
+    actual_std = np.std(all_values)
+    assert abs(actual_std - expected_std) < expected_std * 0.3, \
+        f"xavier_normal_ std {actual_std} too far from expected {expected_std}"
+    
+    # Check that mean is close to 0
+    actual_mean = np.mean(all_values)
+    assert abs(actual_mean) < 0.1, \
+        f"xavier_normal_ mean {actual_mean} should be close to 0"
     
     return True
 
 @testcase(name="init_kaiming_uniform", score=10)
 def test_init_kaiming_uniform():
     """Test Kaiming uniform initialization"""
-    # Test with Linear layer dimensions
+    # Test with 10x20 tensors as mentioned in documentation
     in_features, out_features = 10, 20
-    tensor = Tensor.empty((out_features, in_features))
     
-    # Test fan_in mode
-    init.kaiming_uniform_(tensor, a=0, mode="fan_in", nonlinearity="relu")
+    # Run test 1000 times as mentioned in documentation
+    num_tests = 1000
+    all_values = []
+    
+    for _ in range(num_tests):
+        tensor = Tensor.empty((out_features, in_features))
+        # Test fan_in mode
+        init.kaiming_uniform_(tensor, a=0, mode="fan_in", nonlinearity="relu")
+        arr = np.array(tensor.tolist())
+        all_values.extend(arr.flatten())
     
     # Check expected variance
     fan_in = in_features
@@ -156,45 +183,58 @@ def test_init_kaiming_uniform():
     expected_std = gain / math.sqrt(fan_in)
     expected_bound = expected_std * math.sqrt(3.0)  # For uniform distribution
     
-    arr = np.array(tensor.tolist())
-    assert np.all(np.abs(arr) <= expected_bound * 1.1), \
+    all_values = np.array(all_values)
+    
+    # Check that all values are within bounds
+    assert np.all(np.abs(all_values) <= expected_bound * 1.1), \
         f"kaiming_uniform_ values outside expected bound ±{expected_bound}"
     
-    # For large tensor, check approximate variance
-    if np.prod(tensor.shape) > 100:
-        actual_var = np.var(arr)
-        expected_var = expected_std ** 2
-        assert abs(actual_var - expected_var) < expected_var * 0.4, \
-            f"kaiming_uniform_ variance {actual_var} too far from expected {expected_var}"
+    # Check approximate variance across all runs
+    actual_var = np.var(all_values)
+    expected_var = expected_std ** 2
+    assert abs(actual_var - expected_var) < expected_var * 0.4, \
+        f"kaiming_uniform_ variance {actual_var} too far from expected {expected_var}"
+    
+    # Check that mean is close to 0
+    actual_mean = np.mean(all_values)
+    assert abs(actual_mean) < 0.1, \
+        f"kaiming_uniform_ mean {actual_mean} should be close to 0"
     
     return True
 
 @testcase(name="init_kaiming_normal", score=10)
 def test_init_kaiming_normal():
     """Test Kaiming normal initialization"""
-    # Test with Linear layer dimensions
+    # Test with 10x20 tensors as mentioned in documentation
     in_features, out_features = 10, 20
-    tensor = Tensor.empty((out_features, in_features))
     
-    # Test fan_out mode
-    init.kaiming_normal_(tensor, a=0, mode="fan_out", nonlinearity="relu")
+    # Run test 1000 times as mentioned in documentation
+    num_tests = 1000
+    all_values = []
+    
+    for _ in range(num_tests):
+        tensor = Tensor.empty((out_features, in_features))
+        # Test fan_out mode
+        init.kaiming_normal_(tensor, a=0, mode="fan_out", nonlinearity="relu")
+        arr = np.array(tensor.tolist())
+        all_values.extend(arr.flatten())
     
     # Check expected standard deviation
     fan_out = out_features
     gain = init.calcuate_gain("relu")
     expected_std = gain / math.sqrt(fan_out)
     
-    # For large tensor, check approximate statistics
-    if np.prod(tensor.shape) > 100:
-        arr = np.array(tensor.tolist())
-        actual_std = np.std(arr)
-        assert abs(actual_std - expected_std) < expected_std * 0.3, \
-            f"kaiming_normal_ std {actual_std} too far from expected {expected_std}"
-        
-        # Check that mean is close to 0
-        actual_mean = np.mean(arr)
-        assert abs(actual_mean) < 0.1, \
-            f"kaiming_normal_ mean {actual_mean} should be close to 0"
+    all_values = np.array(all_values)
+    
+    # Check approximate statistics across all runs
+    actual_std = np.std(all_values)
+    assert abs(actual_std - expected_std) < expected_std * 0.3, \
+        f"kaiming_normal_ std {actual_std} too far from expected {expected_std}"
+    
+    # Check that mean is close to 0
+    actual_mean = np.mean(all_values)
+    assert abs(actual_mean) < 0.1, \
+        f"kaiming_normal_ mean {actual_mean} should be close to 0"
     
     return True
 
