@@ -1,4 +1,5 @@
 from typing import Dict, Iterable, List, Optional, Union, Any
+import threading
 
 from clownpiece.tensor import Tensor
 zeros_like = Tensor.zeros_like
@@ -110,6 +111,7 @@ class GraphTask():
         self.dependencies = {}
         self.inputs_buffer = {}
         self._construct_graph()
+        self.lock = threading.Lock()
         
     def _construct_graph(self):
         """
@@ -153,8 +155,8 @@ class GraphTask():
         }
         
     def run(self):
-        self._run_single_thread()
-        # self._run_multi_thread()
+        # self._run_single_thread()
+        self._run_multi_thread()
         
     def _run_single_thread(self):
         ready_queue: List[NodeTask] = [
@@ -181,12 +183,11 @@ class GraphTask():
                         
                         
     def _run_multi_thread(self):
-        import threading
+
         ready_queue: List[NodeTask] = [
             NodeTask(root, (), self) for root in self.roots
         ]
         completed = 0
-        
         exceptions = [] 
                 
         NUM_THREAD = 4
@@ -196,17 +197,21 @@ class GraphTask():
             try:
                 while completed < len(self.nodes):
                     while ready_queue:
-                        node_task = ready_queue.pop(0)
+                        try:
+                            node_task = ready_queue.pop(0)
+                        except:
+                            break
                         node = node_task.node
                         if node is None:
                             continue
                         node_task.run()
-                        for edge in node.next_edges:
-                            if edge.node is not None:
-                                self.dependencies[edge.node] -= 1
-                                if self.dependencies[edge.node] == 0:
-                                    ready_queue.append(NodeTask(edge.node, self.inputs_buffer[edge.node], self))
-                                    del self.inputs_buffer[edge.node]
+                        with self.lock:
+                            for edge in node.next_edges:
+                                if edge.node is not None:
+                                    self.dependencies[edge.node] -= 1
+                                    if self.dependencies[edge.node] == 0:
+                                        ready_queue.append(NodeTask(edge.node, self.inputs_buffer[edge.node], self))
+                                        del self.inputs_buffer[edge.node]
                         completed += 1
             except Exception as exc:
                 exceptions.append(exc)
@@ -226,17 +231,17 @@ class GraphTask():
         """
         if node is None:
             return
-        
-        inputs = self.inputs_buffer[node]
-        assert 0 <= input_nr < len(inputs), "Input number out of range"
-                
-        if input_grad is None:
-            return
-        
-        if inputs[input_nr] is None:
-            inputs[input_nr] = zeros_like(input_grad)
+        with self.lock:    
+            inputs = self.inputs_buffer[node]
+            assert 0 <= input_nr < len(inputs), "Input number out of range"
+                    
+            if input_grad is None:
+                return
+            
+            if inputs[input_nr] is None:
+                inputs[input_nr] = zeros_like(input_grad)
 
-        inputs[input_nr] += input_grad
+            inputs[input_nr] += input_grad
 
 
 """
