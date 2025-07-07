@@ -1,5 +1,7 @@
-from ..tensor import Tensor
-from .module import Module
+# Sigmoid, ReLU, Tanh, LeakyReLU
+
+from clownpiece.tensor import Tensor
+from clownpiece.nn.module import Module
 
 class Sigmoid(Module):
     def __init__(self):

@@ -1,6 +1,8 @@
+# Linear, Embedding, LayerNorm, BatchNorm, MultiheadAttention
+
 from typing import Optional
-from ..tensor import Tensor
-from .module import Module, Parameter, Buffer
+from clownpiece.tensor import Tensor
+from clownpiece.nn.module import Module, Parameter, Buffer
 from . import init
 import math
 

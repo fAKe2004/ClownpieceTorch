@@ -1,8 +1,7 @@
-# MSE, CrossEntropy, etc.
+# MSE, CrossEntropy
 
 from clownpiece.nn.module import Module
 from clownpiece import Tensor
-import math
 
 class MSELoss(Module):
   def __init__(self):

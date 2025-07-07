@@ -1,3 +1,5 @@
+# init methods
+
 from clownpiece.tensor import Tensor
 from clownpiece.autograd.no_grad import no_grad
 

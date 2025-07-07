@@ -324,6 +324,9 @@ with these registry directories, it's easy to implement:
 ```python
 class Module(object):
 
+  """
+    Parameter
+  """
   def register_parameter(self, name: str, param: Optional[Parameter]):
     # why does this function even exist? 
     # well, sometimes we want to register None as placeholder for disabled optioanl parameters. (e.g., bias in Linear)
@@ -373,13 +376,13 @@ class Module(object):
     Modules
   """
 
-  def register_modules(self, module: Optional[Module]):
+  def register_modules(self, module: Optional["Module"]):
     pass
 
-  def modules(self, recursive: bool=True) -> Iterable[Module]:
+  def modules(self, recursive: bool=True) -> Iterable["Module"]:
     pass
 
-  def named_modules(self, recursive: bool=True) -> Iterable[Module]:
+  def named_modules(self, recursive: bool=True) -> Iterable["Module"]:
     pass
 ```
 
@@ -931,13 +934,13 @@ class ModuleList(Module):
   def __add__(self, other: Iterable[Module]):
     pass
 
-  def __setitem(self, index: int, value: Module):
+  def __setitem__(self, index: int, value: Module):
     pass
 
   def __getitem__(self, index: int) -> Module:
     pass
 
-  def __delitem__(self, index: int)
+  def __delitem__(self, index: int):
     pass
 
   def __len__(self):
@@ -963,7 +966,7 @@ class ModuleDict(Module):
   def __getitem__(self, name: str) -> Module:
     pass
 
-  def __delitem__(self, name: str)
+  def __delitem__(self, name: str):
     pass
 
   def __len__(self):
@@ -1057,6 +1060,7 @@ class Embedding(Module):
 
     def forward(self, x: Tensor) -> Tensor:
       pass
+    
 class LayerNorm(Module):
     def __init__(self, num_features: int, eps: float = 1e-5, affine: bool = True):
       # input is reshaped to (-1, num_features) for normalziation.
