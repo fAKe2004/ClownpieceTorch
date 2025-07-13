@@ -3,7 +3,7 @@ from clownpiece.nn import Parameter
 from clownpiece.nn.init import zeros_
 from clownpiece.tensor import Tensor
 
-from typing import List, Iterable, Dict, Any
+from typing import List, Iterable, Dict, Any, Union
 
 class Optimizer():
   
@@ -11,7 +11,7 @@ class Optimizer():
   state: Dict[Parameter, Dict[str, Any]]
   defaults: Dict[str, Any]
   
-  def __init__(self, parameters: Iterable[Parameter] | Iterable[Dict[str, Any]], defaults: Dict[str, Any]):
+  def __init__(self, parameters: Union[Iterable[Parameter], Iterable[Dict[str, Any]]], defaults: Dict[str, Any]):
     self.defaults = defaults
     self.param_groups = []
     self.state = {}

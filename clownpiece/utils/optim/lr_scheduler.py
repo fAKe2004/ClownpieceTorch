@@ -45,8 +45,8 @@ class LambdaLR(LRScheduler):
     """
     
     def __init__(self, optimizer: Optimizer, lr_lambda, last_epoch=-1):
-        super().__init__(optimizer, last_epoch)
         self.lr_lambda = lr_lambda
+        super().__init__(optimizer, last_epoch)
 
     def get_lr(self):
         return [base_lr * self.lr_lambda(self.last_epoch) for base_lr in self.base_lrs]

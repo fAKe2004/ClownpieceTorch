@@ -25,7 +25,7 @@ It provides two key interfaces:
     - The index may or may not be integer based on specific use case. 
     - The value may, or may not be (a tuple of) Tensors.
     - You may consider dataset as a dictionary tailored for dataloading.
-- `len(dataest)` to get the total number of items.
+- `len(dataset)` to get the total number of items.
 
 ```python
 class Dataset:

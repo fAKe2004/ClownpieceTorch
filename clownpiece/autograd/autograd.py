@@ -155,8 +155,8 @@ class GraphTask():
         }
         
     def run(self):
-        # self._run_single_thread()
-        self._run_multi_thread()
+        self._run_single_thread()
+        # self._run_multi_thread()
         
     def _run_single_thread(self):
         ready_queue: List[NodeTask] = [
